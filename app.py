@@ -18,7 +18,7 @@ from sqlalchemy import func, text
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from database.models import (
+from models import (
     Agenda,
     Alternativa,
     Desafio,
@@ -42,9 +42,7 @@ app = Flask(__name__)
 app.secret_key = "sua_chave_secreta_aqui"
 
 
-# =====================================================================
 # Conexão — só pra testar se o banco está respondendo
-# =====================================================================
 @app.route("/conexao")
 def conexao():
     db = _Session()
@@ -57,10 +55,8 @@ def conexao():
         db.close()
 
 
-# =====================================================================
 # Página inicial — manda pro login, pro assistente de rotina (se o
 # usuário ainda não preencheu) ou pra agenda
-# =====================================================================
 def usuario_tem_rotina(db, id_usuario):
     return db.query(Rotina).filter(Rotina.id_usuario == id_usuario).first() is not None
 
@@ -81,9 +77,7 @@ def index():
     return redirect(url_for("agenda"))
 
 
-# =====================================================================
 # Cadastro
-# =====================================================================
 @app.route("/auth/cadastro", methods=["GET", "POST"])
 def cadastro():
     if request.method == "POST":
@@ -118,9 +112,7 @@ def cadastro():
     return render_template("cadastro.html")
 
 
-# =====================================================================
 # Login
-# =====================================================================
 @app.route("/auth/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -154,11 +146,9 @@ def logout():
     return redirect(url_for("login"))
 
 
-# =====================================================================
 # Recuperação de senha — sem servidor de e-mail: pede o e-mail
 # cadastrado (validado no formato nome@dominio.com) e troca a senha
 # na hora
-# =====================================================================
 EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
@@ -196,10 +186,8 @@ def recuperar_senha():
     return render_template("recuperar_senha.html")
 
 
-# =====================================================================
 # Assistente de rotina — formulário (estilo chat com o mascote Log)
 # preenchido no primeiro acesso, e reaproveitado pra reconfigurar
-# =====================================================================
 # O ENUM periodo_dia do banco só aceita manha/tarde/noite (o protótipo
 # no Figma tinha uma 4ª opção "Madrugada", mas o schema é a fonte da
 # verdade — então ela não entra aqui).
@@ -274,10 +262,8 @@ def configurar_rotina():
     )
 
 
-# =====================================================================
 # Agenda — mostra os blocos de estudo da semana montados pelo
 # assistente de rotina
-# =====================================================================
 DIA_SEMANA_LABEL = {
     "seg": "Segunda-feira",
     "ter": "Terça-feira",
@@ -329,9 +315,7 @@ def agenda():
     )
 
 
-# =====================================================================
 # Trilha — caminho com as 11 fases e o progresso do usuário logado
-# =====================================================================
 
 # Posição (em pixels) de cada fase no caminho, e do conector que liga
 # ela à fase anterior. Coordenadas tiradas direto do protótipo no Figma
@@ -433,10 +417,8 @@ def trilha():
     return render_template("trilha.html", usuario=usuario, desempenho=desempenho, fases=fases)
 
 
-# =====================================================================
 # Fluxo de jogo — escolher um desafio dentro de uma fase e responder
 # suas perguntas
-# =====================================================================
 def calcular_estado_desafios(db, id_usuario, desafios_ativos):
     """Mesma regra da trilha, só que pros desafios dentro de uma fase:
     completo se já foi concluído, 'atual' o primeiro incompleto na
@@ -743,9 +725,7 @@ def jogo_finalizar_desafio(id_desafio):
         db.close()
 
 
-# =====================================================================
 # Recompensas
-# =====================================================================
 @app.route("/recompensas")
 def recompensas():
     if not session.get("id_usuario"):
@@ -781,9 +761,7 @@ def recompensas():
     return render_template("recompensas.html", usuario=usuario, itens=itens)
 
 
-# =====================================================================
 # Perfil
-# =====================================================================
 @app.route("/perfil", methods=["GET", "POST"])
 def perfil():
     if not session.get("id_usuario"):
@@ -814,7 +792,6 @@ def perfil():
         db.close()
 
 
-# =====================================================================
 # Log (IA) — a nuvenzinha Log responde só perguntas de matemática.
 #
 # Como ainda não temos a chave da OpenAI configurada, a "IA" por
@@ -824,7 +801,6 @@ def perfil():
 # conteúdo dessas duas funções — o resto (limite de caracteres, limite
 # de perguntas por minuto, timeout por spam fora do tema, gravação no
 # banco) já fica pronto.
-# =====================================================================
 LIMITE_CARACTERES_PERGUNTA = 300
 LIMITE_TOKENS_RESPOSTA = 700
 LIMITE_PERGUNTAS_MATEMATICA_POR_MINUTO = 3
@@ -873,7 +849,7 @@ def gerar_resposta_ia(pergunta, max_tokens=LIMITE_TOKENS_RESPOSTA):
 
 def usuario_em_timeout_ia(db, id_usuario):
     """Se as últimas N perguntas do usuário foram todas fora do tema
-    de matemática, ele fica de castigo por alguns minutos."""
+    de matemática, ele fica de castigo por 10 minutos."""
     # desempata por id_log: a coluna `data` do MySQL só tem resolução de
     # 1 segundo, então duas perguntas seguidas podem cair no mesmo
     # segundo — sem o desempate, "as 3 últimas" viraria imprevisível
@@ -960,10 +936,8 @@ def ia_chat():
     return render_template("ia_chat.html", historico=historico, limite_caracteres=LIMITE_CARACTERES_PERGUNTA)
 
 
-# =====================================================================
 # Ranking — placar dos alunos por pontos (query passada pela turma,
 # reescrita em SQLAlchemy em vez de SQL cru)
-# =====================================================================
 @app.route("/ranking")
 def ranking():
     if not session.get("id_usuario"):
@@ -984,11 +958,9 @@ def ranking():
     return render_template("ranking.html", linhas=linhas)
 
 
-# =====================================================================
 # ADMIN — todas as rotas abaixo exigem usuário logado com role = 1.
 # Não tem decorator: cada rota confere a sessão e o role no início
 # dela mesma, do mesmo jeito que as rotas de aluno conferem o login.
-# =====================================================================
 @app.route("/admin")
 def admin_dashboard():
     if not session.get("id_usuario"):
@@ -1025,7 +997,7 @@ def admin_dashboard():
         db.close()
 
 
-# ---- CRUD Usuários ----------------------------------------------------
+# CRUD Usuários
 @app.route("/admin/usuarios")
 def admin_usuarios():
     if not session.get("id_usuario"):
@@ -1099,7 +1071,7 @@ def admin_alternar_status_usuario(id_usuario):
     return redirect(url_for("admin_usuarios"))
 
 
-# ---- CRUD Fases ---------------------------------------------------------
+# CRUD Fases
 @app.route("/admin/fases")
 def admin_fases():
     if not session.get("id_usuario"):
@@ -1183,7 +1155,7 @@ def admin_alternar_status_fase(id_fase):
     return redirect(url_for("admin_fases"))
 
 
-# ---- CRUD Desafios (dentro de uma fase) ---------------------------------
+# CRUD Desafios (dentro de uma fase)
 @app.route("/admin/fases/<int:id_fase>/desafios")
 def admin_desafios(id_fase):
     if not session.get("id_usuario"):
@@ -1235,7 +1207,7 @@ def admin_desafio_form(id_fase=None, id_desafio=None):
             if ordem < 1 or not (1 <= estrelas <= 5) or tempo_limite_seg < 1:
                 flash("Confira ordem, estrelas (1 a 5) e tempo limite.")
             else:
-                pontos = estrelas * 3  # regra do banco: pontos = estrelas * 3
+                pontos = estrelas * 3  # regra do banco
                 try:
                     if desafio is None:
                         desafio = Desafio(
@@ -1285,7 +1257,7 @@ def admin_alternar_status_desafio(id_desafio):
     return redirect(url_for("admin_desafios", id_fase=id_fase) if id_fase else url_for("admin_fases"))
 
 
-# ---- CRUD Perguntas + Alternativas (dentro de um desafio) ---------------
+# CRUD Perguntas + Alternativas (dentro do desafio)
 @app.route("/admin/desafios/<int:id_desafio>/perguntas")
 def admin_perguntas(id_desafio):
     if not session.get("id_usuario"):
@@ -1383,7 +1355,7 @@ def admin_pergunta_form(id_desafio=None, id_pergunta=None):
 
                 if tipo == "alternativa":
                     existentes = {a.letra: a for a in pergunta.alternativas if a.ativo}
-                    # primeiro tira o "correta" de todo mundo, senão o
+                    # primeiro tira o correta de todo mundo, senão o
                     # trigger do banco acusa 2 alternativas corretas ao
                     # mesmo tempo quando a resposta certa muda de letra
                     for alt in existentes.values():
@@ -1450,7 +1422,7 @@ def admin_alternar_status_pergunta(id_pergunta):
     return redirect(url_for("admin_perguntas", id_desafio=id_desafio) if id_desafio else url_for("admin_fases"))
 
 
-# ---- CRUD Recompensas ----------------------------------------------------
+# CRUD Recompensas
 @app.route("/admin/recompensas")
 def admin_recompensas():
     if not session.get("id_usuario"):
@@ -1638,7 +1610,7 @@ def admin_relatorios():
             .all()
         )
 
-        # tempo total por aluno (já vem acumulado em desempenho.minutos_totais
+        # tempo total por aluno (já vem acumulado em minutos_totais
         # a cada desafio concluído — não precisa somar tentativa por tentativa de novo)
         tempo_por_aluno = (
             db.query(Usuario.nome, Desempenho.minutos_totais)
@@ -1655,10 +1627,7 @@ def admin_relatorios():
         db.close()
 
 
-# =====================================================================
-# Onboarding — passo a passo rápido mostrado só uma vez, logo depois
-# do cadastro, antes do assistente de rotina
-# =====================================================================
+# Onboarding — falando só uma vez, logo dps do primeiro acesso
 ONBOARDING_PASSOS = [
     {
         "emoji": "☁️",
@@ -1695,10 +1664,7 @@ def onboarding(passo):
     return render_template("onboarding.html", passo=passo, total=total, info=ONBOARDING_PASSOS[passo - 1])
 
 
-# =====================================================================
-# Confirmação — telas próprias (sem JS) pra ações que merecem um
-# "tem certeza?" antes de acontecer
-# =====================================================================
+# Confirmação — telas próprias, tem certeza?, antes de confimar
 @app.route("/auth/confirmar-saida")
 def confirmar_saida():
     if not session.get("id_usuario"):
@@ -1854,14 +1820,12 @@ def admin_confirmar_status_recompensa(id_recompensa):
         db.close()
 
 
-# =====================================================================
 # Telas de erro — 404 (página não existe) e 500 (algo deu errado do
 # nosso lado). "Sem internet" não dá pra fazer aqui: como o app não
 # usa JavaScript pra buscar dados (é tudo página inteira carregada
 # pelo servidor), se o aluno estiver sem internet o pedido nem chega
 # no Flask — quem mostra a tela de "sem conexão" nesse caso é o
 # próprio navegador, não dá pra personalizar isso sem JS.
-# =====================================================================
 @app.errorhandler(404)
 def erro_404(erro):
     return (
