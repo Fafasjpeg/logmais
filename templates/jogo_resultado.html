@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Resultado — LOG+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+{% endblock %}
+{% block content %}
+<div class="tela-app">
+  <header class="topo-azul"><h1>Resultado</h1></header>
+  <main class="conteudo-app">
+    <div class="cartao {{ 'feedback-acertou' if passou else 'feedback-errou' }}" style="text-align:center;">
+      <p class="cartao-titulo">{{ '🎉 Parabéns, você passou!' if passou else '😕 Não foi dessa vez' }}</p>
+      <p class="cartao-corpo">Você acertou {{ acertos }} de {{ total }} perguntas.</p>
+      <p class="cartao-corpo">⏱️ Tempo corrido: {{ tempo_gasto // 60 }}:{{ '%02d'|format(tempo_gasto % 60) }}</p>
+      {% if pontos_ganhos %}
+        <p class="cartao-corpo">+{{ pontos_ganhos }} pontos! ⭐</p>
+      {% elif ja_tinha_concluido %}
+        <p class="cartao-corpo">Esse desafio já tinha sido concluído antes, então não gera pontos de novo — mas o tempo conta!</p>
+      {% endif %}
+    </div>
+    <a class="botao-primario" style="display:block; text-align:center; text-decoration:none;" href="{{ url_for('jogo_fase', id_fase=fase.id_fase) }}">Voltar pra fase</a>
+  </main>
+  <nav class="rodape">
+    <a class="rodape-item" href="{{ url_for('agenda') }}">
+      <span class="rodape-icone">📅</span>
+      <span class="rodape-label">Agenda</span>
+    </a>
+    <a class="rodape-item" href="{{ url_for('ia_chat') }}">
+      <span class="rodape-icone">☁️</span>
+      <span class="rodape-label">Log (IA)</span>
+    </a>
+    <a class="rodape-item" href="{{ url_for('recompensas') }}">
+      <span class="rodape-icone">🏅</span>
+      <span class="rodape-label">Recompensas</span>
+    </a>
+    <a class="rodape-item rodape-ativo" href="{{ url_for('trilha') }}">
+      <span class="rodape-icone rodape-icone-ativo">⭐</span>
+      <span class="rodape-label">Trilha</span>
+    </a>
+  </nav>
+</div>
+{% endblock %}

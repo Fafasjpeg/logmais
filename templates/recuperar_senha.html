@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Recuperar senha — LOG+{% endblock %}
+{% block content %}
+<div class="tela-auth">
+  <header class="auth-topo"><h1>Esqueceu a senha?</h1></header>
+  <main class="auth-conteudo">
+    <p class="logo"><span class="logo-log">LOG</span><span class="logo-mais">+</span></p>
+
+    {% with mensagens = get_flashed_messages() %}
+      {% if mensagens %}
+        <ul class="avisos">{% for m in mensagens %}<li>{{ m }}</li>{% endfor %}</ul>
+      {% endif %}
+    {% endwith %}
+
+    <form method="post" class="form-auth">
+      <input type="email" name="email" placeholder="E-mail cadastrado (ex: nome@gmail.com)" required>
+      <input type="password" name="nova_senha" placeholder="Nova senha" minlength="6" required>
+      <input type="password" name="confirmar_senha" placeholder="Confirmar nova senha" minlength="6" required>
+      <button type="submit" class="botao-primario">Redefinir senha</button>
+    </form>
+
+    <p class="links-auth"><a href="{{ url_for('login') }}">Voltar pro login</a></p>
+  </main>
+  <footer class="auth-rodape">© 2026 Log+. Todos os direitos reservados.</footer>
+</div>
+{% endblock %}

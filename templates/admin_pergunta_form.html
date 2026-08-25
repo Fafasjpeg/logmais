@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar pergunta' if pergunta else 'Nova pergunta' }} — Admin LOG+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% endblock %}
+{% block content %}
+<div class="admin-shell">
+  <div class="admin-topo">
+    <h1>LOG+ Admin</h1>
+    <nav class="admin-nav">
+      <a href="{{ url_for('admin_dashboard') }}">Dashboard</a>
+      <a href="{{ url_for('admin_usuarios') }}">Usuários</a>
+      <a href="{{ url_for('admin_fases') }}">Fases</a>
+      <a href="{{ url_for('admin_recompensas') }}">Recompensas</a>
+      <a href="{{ url_for('admin_rotinas') }}">Rotinas</a>
+      <a href="{{ url_for('admin_relatorios') }}">Relatórios</a>
+      <a href="{{ url_for('logout') }}">Sair</a>
+    </nav>
+  </div>
+
+  <h2 class="admin-titulo-pagina">{{ 'Editar pergunta' if pergunta else 'Nova pergunta' }} — Desafio {{ desafio.ordem }} ({{ desafio.fase.nome_fase }})</h2>
+
+  {% with mensagens = get_flashed_messages() %}
+    {% if mensagens %}<ul class="avisos">{% for m in mensagens %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
+  {% endwith %}
+
+  <form method="post" class="admin-form form-pergunta">
+    <label>Ordem dentro do desafio
+      <input type="number" name="ordem" min="1" value="{{ pergunta.ordem if pergunta else '' }}" required>
+    </label>
+    <label>Enunciado
+      <textarea name="enunciado" rows="3" required>{{ pergunta.enunciado if pergunta else '' }}</textarea>
+    </label>
+
+    <label>Tipo de pergunta</label>
+    <div class="admin-linha-radios">
+      <label><input type="radio" name="tipo" value="alternativa" {{ 'checked' if not pergunta or pergunta.tipo.value == 'alternativa' }}> Múltipla escolha</label>
+      <label><input type="radio" name="tipo" value="digitada" {{ 'checked' if pergunta and pergunta.tipo.value == 'digitada' }}> Resposta digitada</label>
+    </div>
+
+    <div class="secao-form secao-alternativas">
+      <p style="margin:0; font-size:12px; color:#666;">Preencha só as alternativas que existirem (mínimo 2) e marque qual é a certa.</p>
+      {% for letra in letras %}
+        <label style="flex-direction: row; align-items: center; gap: 8px;">
+          <input type="radio" name="letra_correta" value="{{ letra }}" {{ 'checked' if letra == letra_correta_atual or (not pergunta and letra == 'A') }}>
+          {{ letra }})
+          <input type="text" name="alternativa_{{ letra }}" value="{{ alternativas_atuais.get(letra, '') }}" placeholder="Texto da alternativa {{ letra }}" style="flex:1;">
+        </label>
+      {% endfor %}
+    </div>
+
+    <div class="secao-form secao-digitada">
+      <label>Resposta correta (digitada)
+        <input type="text" name="resposta_correta" value="{{ pergunta.resposta_correta if pergunta and pergunta.tipo.value == 'digitada' else '' }}">
+      </label>
+    </div>
+
+    <div class="admin-acoes">
+      <button type="submit" class="admin-botao admin-botao-primario">Salvar</button>
+      <a class="admin-botao admin-botao-secundario" href="{{ url_for('admin_perguntas', id_desafio=desafio.id_desafio) }}">Voltar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

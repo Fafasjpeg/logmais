@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Perfil — LOG+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+{% endblock %}
+{% block content %}
+<div class="tela-app">
+  <header class="topo-azul">
+    <a class="topo-voltar" href="{{ url_for('agenda') }}">←</a>
+    <h1>Perfil</h1>
+  </header>
+  <main class="conteudo-app">
+    {% with mensagens = get_flashed_messages() %}
+      {% if mensagens %}<ul class="avisos">{% for m in mensagens %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
+    {% endwith %}
+
+    <div class="cartao" style="text-align:center;">
+      <div class="avatar-perfil">{{ usuario.nome[0]|upper }}</div>
+      <p class="cartao-corpo"><strong>{{ usuario.nome }}</strong></p>
+      <p class="cartao-corpo">{{ usuario.email }}</p>
+      <p class="cartao-corpo">🏅 {{ usuario.subnick }}</p>
+    </div>
+
+    <div class="cartao">
+      <p class="cartao-corpo">⭐ {{ desempenho.total_pontos if desempenho else 0 }} pontos · 🔥 {{ desempenho.sequencia_atual if desempenho else 0 }} sequência</p>
+      <p class="cartao-corpo">{{ desempenho.minutos_totais if desempenho else 0 }} minutos estudados no total</p>
+    </div>
+
+    <form method="post" class="form-auth" style="margin-bottom: 16px;">
+      <input type="text" name="nome" placeholder="Nome" value="{{ usuario.nome }}">
+      <input type="text" name="subnick" placeholder="Apelido" value="{{ usuario.subnick }}">
+      <button type="submit" class="botao-primario">Salvar</button>
+    </form>
+
+    <a class="botao-secundario" href="{{ url_for('ranking') }}">🏆 Ver ranking da turma</a>
+    <a class="botao-secundario" href="{{ url_for('configurar_rotina') }}">Reconfigurar rotina</a>
+    <a class="botao-secundario botao-perigo" href="{{ url_for('confirmar_saida') }}">Sair</a>
+  </main>
+
+  <nav class="rodape">
+    <a class="rodape-item" href="{{ url_for('agenda') }}">
+      <span class="rodape-icone">📅</span>
+      <span class="rodape-label">Agenda</span>
+    </a>
+    <a class="rodape-item" href="{{ url_for('ia_chat') }}">
+      <span class="rodape-icone">☁️</span>
+      <span class="rodape-label">Log (IA)</span>
+    </a>
+    <a class="rodape-item" href="{{ url_for('recompensas') }}">
+      <span class="rodape-icone">🏅</span>
+      <span class="rodape-label">Recompensas</span>
+    </a>
+    <a class="rodape-item" href="{{ url_for('trilha') }}">
+      <span class="rodape-icone">⭐</span>
+      <span class="rodape-label">Trilha</span>
+    </a>
+  </nav>
+</div>
+{% endblock %}

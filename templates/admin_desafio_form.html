@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar desafio' if desafio else 'Novo desafio' }} — Admin LOG+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% endblock %}
+{% block content %}
+<div class="admin-shell">
+  <div class="admin-topo">
+    <h1>LOG+ Admin</h1>
+    <nav class="admin-nav">
+      <a href="{{ url_for('admin_dashboard') }}">Dashboard</a>
+      <a href="{{ url_for('admin_usuarios') }}">Usuários</a>
+      <a href="{{ url_for('admin_fases') }}">Fases</a>
+      <a href="{{ url_for('admin_recompensas') }}">Recompensas</a>
+      <a href="{{ url_for('admin_rotinas') }}">Rotinas</a>
+      <a href="{{ url_for('admin_relatorios') }}">Relatórios</a>
+      <a href="{{ url_for('logout') }}">Sair</a>
+    </nav>
+  </div>
+
+  <h2 class="admin-titulo-pagina">{{ 'Editar desafio' if desafio else 'Novo desafio' }} — {{ fase.nome_fase }}</h2>
+
+  {% with mensagens = get_flashed_messages() %}
+    {% if mensagens %}<ul class="avisos">{% for m in mensagens %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
+  {% endwith %}
+
+  <form method="post" class="admin-form">
+    <label>Ordem dentro da fase
+      <input type="number" name="ordem" min="1" value="{{ desafio.ordem if desafio else '' }}" required>
+    </label>
+    <label>Estrelas (dificuldade, 1 a 5 — os pontos = estrelas × 3 são calculados sozinhos)
+      <input type="number" name="estrelas" min="1" max="5" value="{{ desafio.estrelas if desafio else '' }}" required>
+    </label>
+    <label>Tempo limite (segundos)
+      <input type="number" name="tempo_limite_seg" min="1" value="{{ desafio.tempo_limite_seg if desafio else '' }}" required>
+    </label>
+    <div class="admin-acoes">
+      <button type="submit" class="admin-botao admin-botao-primario">Salvar</button>
+      <a class="admin-botao admin-botao-secundario" href="{{ url_for('admin_desafios', id_fase=fase.id_fase) }}">Voltar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Recompensas — LOG+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+{% endblock %}
+{% block content %}
+<div class="tela-app">
+  <header class="topo-azul">
+    <h1>Recompensas</h1>
+    <a class="topo-avatar" href="{{ url_for('perfil') }}">{{ usuario.nome[0]|upper }}</a>
+  </header>
+  <main class="conteudo-app">
+    <a class="botao-secundario" href="{{ url_for('ranking') }}">🏆 Ver ranking da turma</a>
+    {% for item in itens %}
+      <div class="cartao {{ '' if item.conquistada else 'cartao-bloqueado' }}">
+        <p class="cartao-titulo">{{ item.recompensa.icone or '🏅' }} {{ item.recompensa.nome }}</p>
+        <p class="cartao-corpo">{{ item.recompensa.descricao or '' }}</p>
+        <p class="cartao-corpo">
+          {% if item.conquistada %}
+            Conquistada! ✅
+          {% else %}
+            {{ item.progresso_atual }} / {{ item.recompensa.valor_necessario }}
+          {% endif %}
+        </p>
+      </div>
+    {% else %}
+      <p>Nenhuma recompensa cadastrada ainda.</p>
+    {% endfor %}
+  </main>
+  <nav class="rodape">
+    <a class="rodape-item" href="{{ url_for('agenda') }}">
+      <span class="rodape-icone">📅</span>
+      <span class="rodape-label">Agenda</span>
+    </a>
+    <a class="rodape-item" href="{{ url_for('ia_chat') }}">
+      <span class="rodape-icone">☁️</span>
+      <span class="rodape-label">Log (IA)</span>
+    </a>
+    <a class="rodape-item rodape-ativo" href="{{ url_for('recompensas') }}">
+      <span class="rodape-icone rodape-icone-ativo">🏅</span>
+      <span class="rodape-label">Recompensas</span>
+    </a>
+    <a class="rodape-item" href="{{ url_for('trilha') }}">
+      <span class="rodape-icone">⭐</span>
+      <span class="rodape-label">Trilha</span>
+    </a>
+  </nav>
+</div>
+{% endblock %}

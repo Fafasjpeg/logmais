@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Confirmar — Admin LOG+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% endblock %}
+{% block content %}
+<div class="admin-shell">
+  <div class="admin-topo">
+    <h1>LOG+ Admin</h1>
+    <nav class="admin-nav">
+      <a href="{{ url_for('admin_dashboard') }}">Dashboard</a>
+      <a href="{{ url_for('admin_usuarios') }}">Usuários</a>
+      <a href="{{ url_for('admin_fases') }}">Fases</a>
+      <a href="{{ url_for('admin_recompensas') }}">Recompensas</a>
+      <a href="{{ url_for('admin_rotinas') }}">Rotinas</a>
+      <a href="{{ url_for('admin_relatorios') }}">Relatórios</a>
+      <a href="{{ url_for('logout') }}">Sair</a>
+    </nav>
+  </div>
+
+  <div class="admin-form" style="text-align:center;">
+    <p style="font-size:16px; font-weight:600; margin:0;">⚠️ {{ titulo }}</p>
+    <p style="font-size:13px; margin:0; font-weight:400;">{{ mensagem }}</p>
+    <div class="admin-acoes" style="justify-content:center;">
+      <form method="post" action="{{ url_confirmar }}">
+        <button type="submit" class="admin-botao admin-botao-perigo">{{ rotulo_confirmar }}</button>
+      </form>
+      <a class="admin-botao admin-botao-secundario" href="{{ url_cancelar }}">Cancelar</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

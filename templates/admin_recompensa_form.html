@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar recompensa' if recompensa else 'Nova recompensa' }} — Admin LOG+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% endblock %}
+{% block content %}
+<div class="admin-shell">
+  <div class="admin-topo">
+    <h1>LOG+ Admin</h1>
+    <nav class="admin-nav">
+      <a href="{{ url_for('admin_dashboard') }}">Dashboard</a>
+      <a href="{{ url_for('admin_usuarios') }}">Usuários</a>
+      <a href="{{ url_for('admin_fases') }}">Fases</a>
+      <a href="{{ url_for('admin_recompensas') }}">Recompensas</a>
+      <a href="{{ url_for('admin_rotinas') }}">Rotinas</a>
+      <a href="{{ url_for('admin_relatorios') }}">Relatórios</a>
+      <a href="{{ url_for('logout') }}">Sair</a>
+    </nav>
+  </div>
+
+  <h2 class="admin-titulo-pagina">{{ 'Editar recompensa' if recompensa else 'Nova recompensa' }}</h2>
+
+  {% with mensagens = get_flashed_messages() %}
+    {% if mensagens %}<ul class="avisos">{% for m in mensagens %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
+  {% endwith %}
+
+  <form method="post" class="admin-form">
+    <label>Nome
+      <input type="text" name="nome" value="{{ recompensa.nome if recompensa else '' }}" required>
+    </label>
+    <label>Descrição
+      <textarea name="descricao" rows="2">{{ recompensa.descricao if recompensa else '' }}</textarea>
+    </label>
+    <label>Ícone (um emoji)
+      <input type="text" name="icone" value="{{ recompensa.icone if recompensa else '' }}" maxlength="8">
+    </label>
+    <label>Tipo
+      <select name="tipo">
+        {% for valor, rotulo in tipos %}
+          <option value="{{ valor }}" {{ 'selected' if recompensa and recompensa.tipo.value == valor }}>{{ rotulo }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Valor necessário
+      <input type="number" name="valor_necessario" min="1" value="{{ recompensa.valor_necessario if recompensa else '' }}" required>
+    </label>
+    <div class="admin-acoes">
+      <button type="submit" class="admin-botao admin-botao-primario">Salvar</button>
+      <a class="admin-botao admin-botao-secundario" href="{{ url_for('admin_recompensas') }}">Voltar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

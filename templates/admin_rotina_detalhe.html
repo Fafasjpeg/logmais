@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Agenda de {{ aluno.nome }} — Admin LOG+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% endblock %}
+{% block content %}
+<div class="admin-shell">
+  <div class="admin-topo">
+    <h1>LOG+ Admin</h1>
+    <nav class="admin-nav">
+      <a href="{{ url_for('admin_dashboard') }}">Dashboard</a>
+      <a href="{{ url_for('admin_usuarios') }}">Usuários</a>
+      <a href="{{ url_for('admin_fases') }}">Fases</a>
+      <a href="{{ url_for('admin_recompensas') }}">Recompensas</a>
+      <a href="{{ url_for('admin_rotinas') }}">Rotinas</a>
+      <a href="{{ url_for('admin_relatorios') }}">Relatórios</a>
+      <a href="{{ url_for('logout') }}">Sair</a>
+    </nav>
+  </div>
+
+  <h2 class="admin-titulo-pagina">Agenda de {{ aluno.nome }}</h2>
+
+  {% if not rotina %}
+    <p>Esse aluno ainda não preencheu a rotina.</p>
+  {% else %}
+    <p>Período: <strong>{{ rotina.periodo_dia.value }}</strong> · Minutos por dia: <strong>{{ rotina.minutos_por_dia }}</strong></p>
+
+    <table class="admin-tabela">
+      <tr>
+        <th>Dia</th>
+        <th>Minutos</th>
+        <th>Status</th>
+      </tr>
+      {% for bloco in blocos %}
+        <tr>
+          <td>{{ dia_label[bloco.dia_semana.value] }}</td>
+          <td>{{ bloco.minutos }}</td>
+          <td><span class="selo-status {{ 'selo-ativo' if bloco.status.value == 'concluida' else 'selo-inativo' }}">{{ bloco.status.value }}</span></td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% endif %}
+
+  <div class="admin-acoes">
+    <a class="admin-botao admin-botao-secundario" href="{{ url_for('admin_rotinas') }}">Voltar</a>
+  </div>
+</div>
+{% endblock %}

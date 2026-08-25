@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Assistente Log+ — LOG+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+{% endblock %}
+{% block content %}
+<div class="tela-app">
+  <header class="topo-azul">
+    <h1>Assistente Log+</h1>
+  </header>
+
+  <main class="conteudo-app">
+    {% with mensagens = get_flashed_messages() %}
+      {% if mensagens %}
+        <ul class="avisos">{% for m in mensagens %}<li>{{ m }}</li>{% endfor %}</ul>
+      {% endif %}
+    {% endwith %}
+
+    <div class="bolha-log"><span class="avatar-log">☁️</span><p class="texto">Oi! Eu sou o Log. Vamos montar sua rotina de estudos?</p></div>
+
+    <form method="post">
+      <div class="bolha-log"><span class="avatar-log">☁️</span><p class="texto">Qual será a duração diária?</p></div>
+      <div class="chip-grupo">
+        {% for minutos in duracoes %}
+          <label class="chip">
+            <input type="radio" name="minutos_por_dia" value="{{ minutos }}" {{ 'checked' if loop.first }}>
+            {{ minutos }} minutos
+          </label>
+        {% endfor %}
+      </div>
+
+      <div class="bolha-log"><span class="avatar-log">☁️</span><p class="texto">Qual o melhor horário pra você?</p></div>
+      <div class="chip-grupo">
+        {% for valor, rotulo in periodos %}
+          <label class="chip">
+            <input type="radio" name="periodo_dia" value="{{ valor }}" {{ 'checked' if loop.first }}>
+            {{ rotulo }}
+          </label>
+        {% endfor %}
+      </div>
+
+      <div class="bolha-log"><span class="avatar-log">☁️</span><p class="texto">Perfeito! Quais dias você quer estudar?</p></div>
+      <div class="chip-grupo">
+        {% for valor, letra in dias %}
+          <label class="chip-dia">
+            <input type="checkbox" name="dias" value="{{ valor }}">
+            {{ letra }}
+          </label>
+        {% endfor %}
+      </div>
+
+      <button type="submit" class="botao-primario" style="width:100%; margin-top: 10px;">Gerar nova agenda</button>
+    </form>
+  </main>
+
+  <nav class="rodape">
+    <a class="rodape-item" href="{{ url_for('agenda') }}">
+      <span class="rodape-icone">📅</span>
+      <span class="rodape-label">Agenda</span>
+    </a>
+    <a class="rodape-item rodape-ativo" href="{{ url_for('ia_chat') }}">
+      <span class="rodape-icone rodape-icone-ativo">☁️</span>
+      <span class="rodape-label">Log (IA)</span>
+    </a>
+    <a class="rodape-item" href="{{ url_for('recompensas') }}">
+      <span class="rodape-icone">🏅</span>
+      <span class="rodape-label">Recompensas</span>
+    </a>
+    <a class="rodape-item" href="{{ url_for('trilha') }}">
+      <span class="rodape-icone">⭐</span>
+      <span class="rodape-label">Trilha</span>
+    </a>
+  </nav>
+</div>
+{% endblock %}

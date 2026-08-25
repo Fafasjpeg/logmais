@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo }} — LOG+{% endblock %}
+{% block content %}
+<div class="tela-auth">
+  <header class="auth-topo"><h1>Ops!</h1></header>
+  <main class="auth-conteudo">
+    <p class="logo"><span class="logo-log">LOG</span><span class="logo-mais">+</span></p>
+
+    <p style="font-size:48px; margin:0 0 10px;">{{ emoji }}</p>
+    <p style="font-size:18px; font-weight:600; color:#397ad5; text-align:center; margin:0 0 8px;">{{ titulo }}</p>
+    <p style="font-size:14px; text-align:center; margin:0 0 24px; max-width:280px;">{{ mensagem }}</p>
+
+    <a href="{{ url_for('index') }}" class="botao-primario" style="text-decoration:none; display:block; text-align:center; width:100%; max-width:280px;">Voltar pro início</a>
+  </main>
+  <footer class="auth-rodape">© 2026 Log+. Todos os direitos reservados.</footer>
+</div>
+{% endblock %}

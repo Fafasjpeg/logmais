@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Desafios de {{ fase.nome_fase }} — Admin LOG+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% endblock %}
+{% block content %}
+<div class="admin-shell">
+  <div class="admin-topo">
+    <h1>LOG+ Admin</h1>
+    <nav class="admin-nav">
+      <a href="{{ url_for('admin_dashboard') }}">Dashboard</a>
+      <a href="{{ url_for('admin_usuarios') }}">Usuários</a>
+      <a href="{{ url_for('admin_fases') }}">Fases</a>
+      <a href="{{ url_for('admin_recompensas') }}">Recompensas</a>
+      <a href="{{ url_for('admin_rotinas') }}">Rotinas</a>
+      <a href="{{ url_for('admin_relatorios') }}">Relatórios</a>
+      <a href="{{ url_for('logout') }}">Sair</a>
+    </nav>
+  </div>
+
+  <h2 class="admin-titulo-pagina">Desafios — {{ fase.nome_fase }}</h2>
+
+  <div class="admin-acoes" style="margin-bottom:16px;">
+    <a class="admin-botao admin-botao-primario" href="{{ url_for('admin_desafio_form', id_fase=fase.id_fase) }}">+ Novo desafio</a>
+    <a class="admin-botao admin-botao-secundario" href="{{ url_for('admin_fases') }}">Voltar pras fases</a>
+  </div>
+
+  <table class="admin-tabela">
+    <tr>
+      <th>Ordem</th>
+      <th>Estrelas</th>
+      <th>Pontos</th>
+      <th>Tempo limite</th>
+      <th>Status</th>
+      <th>Ações</th>
+    </tr>
+    {% for desafio in desafios %}
+      <tr>
+        <td>{{ desafio.ordem }}</td>
+        <td>{{ '⭐' * desafio.estrelas }}</td>
+        <td>{{ desafio.pontos }}</td>
+        <td>{{ desafio.tempo_limite_seg }}s</td>
+        <td><span class="selo-status {{ 'selo-ativo' if desafio.ativo else 'selo-inativo' }}">{{ 'ativo' if desafio.ativo else 'inativo' }}</span></td>
+        <td class="admin-acoes">
+          <a class="admin-botao admin-botao-secundario" href="{{ url_for('admin_perguntas', id_desafio=desafio.id_desafio) }}">Perguntas</a>
+          <a class="admin-botao admin-botao-secundario" href="{{ url_for('admin_desafio_form', id_desafio=desafio.id_desafio) }}">Editar</a>
+          {% if desafio.ativo %}
+            <a class="admin-botao admin-botao-perigo" href="{{ url_for('admin_confirmar_status_desafio', id_desafio=desafio.id_desafio) }}">Desativar</a>
+          {% else %}
+            <form method="post" action="{{ url_for('admin_alternar_status_desafio', id_desafio=desafio.id_desafio) }}" style="display:inline;">
+              <button type="submit" class="admin-botao admin-botao-primario">Ativar</button>
+            </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

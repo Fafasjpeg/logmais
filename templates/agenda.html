@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Sua agenda — LOG+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+{% endblock %}
+{% block content %}
+<div class="tela-app">
+  <header class="topo-azul">
+    <h1>Sua agenda</h1>
+    <a class="topo-avatar" href="{{ url_for('perfil') }}">{{ usuario.nome[0]|upper }}</a>
+  </header>
+
+  <main class="conteudo-app">
+    {% with mensagens = get_flashed_messages() %}
+      {% if mensagens %}
+        <ul class="avisos">{% for m in mensagens %}<li>{{ m }}</li>{% endfor %}</ul>
+      {% endif %}
+    {% endwith %}
+
+    {% for bloco in blocos %}
+      <div class="cartao">
+        <p class="cartao-titulo">{{ dia_label[bloco.dia_semana.value] }}</p>
+        <p class="cartao-corpo">{{ bloco.minutos }} min · {{ 'concluída ✅' if bloco.status.value == 'concluida' else 'pendente' }}</p>
+        <a class="botao-primario" style="display:block; text-align:center; text-decoration:none;" href="{{ url_for('trilha') }}">iniciar</a>
+      </div>
+    {% else %}
+      <p>Você ainda não tem dias de estudo configurados.</p>
+    {% endfor %}
+
+    <a class="botao-secundario" href="{{ url_for('configurar_rotina') }}">Reconfigurar rotina</a>
+
+    <div class="cartao" style="border-color: var(--amarelo); margin-top: 20px;">
+      <p class="cartao-corpo">Progresso do dia: {{ progresso_hoje }}%</p>
+      <div class="barra-progresso"><div class="barra-progresso-preenchida" style="width: {{ progresso_hoje }}%;"></div></div>
+      <p class="cartao-corpo">Tempo restando: {{ minutos_restando }} minutos</p>
+    </div>
+  </main>
+
+  <nav class="rodape">
+    <a class="rodape-item rodape-ativo" href="{{ url_for('agenda') }}">
+      <span class="rodape-icone rodape-icone-ativo">📅</span>
+      <span class="rodape-label">Agenda</span>
+    </a>
+    <a class="rodape-item" href="{{ url_for('ia_chat') }}">
+      <span class="rodape-icone">☁️</span>
+      <span class="rodape-label">Log (IA)</span>
+    </a>
+    <a class="rodape-item" href="{{ url_for('recompensas') }}">
+      <span class="rodape-icone">🏅</span>
+      <span class="rodape-label">Recompensas</span>
+    </a>
+    <a class="rodape-item" href="{{ url_for('trilha') }}">
+      <span class="rodape-icone">⭐</span>
+      <span class="rodape-label">Trilha</span>
+    </a>
+  </nav>
+</div>
+{% endblock %}

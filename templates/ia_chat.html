@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Log (IA) — LOG+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+{% endblock %}
+{% block content %}
+<div class="tela-app">
+  <header class="topo-azul"><h1>Assistente Log+</h1></header>
+  <main class="conteudo-app">
+    {% with mensagens = get_flashed_messages() %}
+      {% if mensagens %}<ul class="avisos">{% for m in mensagens %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
+    {% endwith %}
+
+    {% if not historico %}
+      <div class="bolha-log"><span class="avatar-log">☁️</span><p class="texto">Oi! Pode me perguntar qualquer coisa sobre matemática 🧮</p></div>
+    {% endif %}
+
+    {% for msg in historico %}
+      <div class="bolha-usuario"><p class="texto">{{ msg.pergunta_usuario }}</p></div>
+      <div class="bolha-log"><span class="avatar-log">☁️</span><p class="texto">{{ msg.resposta_ia }}</p></div>
+    {% endfor %}
+
+    <form method="post" style="margin-top: 20px;">
+      <textarea name="pergunta" maxlength="{{ limite_caracteres }}" rows="3" placeholder="Digite sua pergunta de matemática..." class="caixa-texto"></textarea>
+      <button type="submit" class="botao-primario" style="width:100%; margin-top:10px;">Enviar</button>
+    </form>
+  </main>
+  <nav class="rodape">
+    <a class="rodape-item" href="{{ url_for('agenda') }}">
+      <span class="rodape-icone">📅</span>
+      <span class="rodape-label">Agenda</span>
+    </a>
+    <a class="rodape-item rodape-ativo" href="{{ url_for('ia_chat') }}">
+      <span class="rodape-icone rodape-icone-ativo">☁️</span>
+      <span class="rodape-label">Log (IA)</span>
+    </a>
+    <a class="rodape-item" href="{{ url_for('recompensas') }}">
+      <span class="rodape-icone">🏅</span>
+      <span class="rodape-label">Recompensas</span>
+    </a>
+    <a class="rodape-item" href="{{ url_for('trilha') }}">
+      <span class="rodape-icone">⭐</span>
+      <span class="rodape-label">Trilha</span>
+    </a>
+  </nav>
+</div>
+{% endblock %}

@@ -1,0 +1,187 @@
+.tela-trilha {
+  width: 390px;
+  height: 100vh;
+  background: #f2f3fa;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- Cabeçalho ---- */
+
+.trilha-topo {
+  position: relative;
+  flex-shrink: 0;
+  height: 109px;
+  background: #fff;
+  border-bottom: 1px solid #e5e5f2;
+}
+
+.avatar {
+  position: absolute;
+  left: 305px;
+  top: 26px;
+  width: 56px;
+  height: 56px;
+}
+
+.avatar img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.avatar-letra {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Archivo Black', 'Inter', sans-serif;
+  font-size: 24px;
+  color: #fff;
+}
+
+.selo {
+  position: absolute;
+  top: 39px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 10px;
+  border-radius: 17px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #262633;
+}
+
+.selo-pontos {
+  left: 105px;
+  background: #fff2bf;
+}
+
+.selo-sequencia {
+  left: 34px;
+  background: #ffe5cc;
+}
+
+.selo-subnick {
+  position: absolute;
+  left: 279px;
+  top: 67px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 13px;
+  background: #d9edd9;
+  color: #2e6b38;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ---- Caminho das fases (rolável) ---- */
+
+.trilha-caminho {
+  flex: 1;
+  overflow-y: auto;
+  position: relative;
+}
+
+.trilha-caminho-inner {
+  position: relative;
+  width: 390px;
+  height: 2420px;
+}
+
+.trilha-dica {
+  position: absolute;
+  left: 50%;
+  top: 635px;
+  transform: translateX(-50%);
+  width: 350px;
+  margin: 0;
+  text-align: center;
+  font-size: 12px;
+  color: #999cad;
+}
+
+.fase-conector {
+  position: absolute;
+}
+
+.fase-no {
+  position: absolute;
+  width: 88px;
+  height: 88px;
+}
+
+.fase-icone {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.fase-emoji {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+}
+
+.fase-badge {
+  position: absolute;
+  left: 66px;
+  top: -6px;
+  width: 26px;
+  height: 26px;
+}
+
+.fase-badge img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.fase-badge-num {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #40404d;
+}
+
+.fase-estrelas {
+  position: absolute;
+  left: 50%;
+  top: 94px;
+  transform: translateX(-50%);
+  width: 140px;
+  margin: 0;
+  text-align: center;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.fase-nome {
+  position: absolute;
+  left: 50%;
+  top: 109px;
+  transform: translateX(-50%);
+  width: 160px;
+  margin: 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #404252;
+}
+
+/* O rodapé de navegação (.rodape / .rodape-item / ...) e o card de
+   avisos (.avisos) agora ficam em static/css/app.css, compartilhado
+   com as outras telas depois do login. */

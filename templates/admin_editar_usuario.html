@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Editar usuário — Admin LOG+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% endblock %}
+{% block content %}
+<div class="admin-shell">
+  <div class="admin-topo">
+    <h1>LOG+ Admin</h1>
+    <nav class="admin-nav">
+      <a href="{{ url_for('admin_dashboard') }}">Dashboard</a>
+      <a href="{{ url_for('admin_usuarios') }}">Usuários</a>
+      <a href="{{ url_for('admin_fases') }}">Fases</a>
+      <a href="{{ url_for('admin_recompensas') }}">Recompensas</a>
+      <a href="{{ url_for('admin_rotinas') }}">Rotinas</a>
+      <a href="{{ url_for('admin_relatorios') }}">Relatórios</a>
+      <a href="{{ url_for('logout') }}">Sair</a>
+    </nav>
+  </div>
+
+  <h2 class="admin-titulo-pagina">Editar {{ usuario.nome }}</h2>
+
+  {% with mensagens = get_flashed_messages() %}
+    {% if mensagens %}<ul class="avisos">{% for m in mensagens %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
+  {% endwith %}
+
+  <form method="post" class="admin-form">
+    <label>Nome
+      <input type="text" name="nome" value="{{ usuario.nome }}" required>
+    </label>
+    <label>E-mail
+      <input type="email" name="email" value="{{ usuario.email }}" required>
+    </label>
+    <label>Apelido
+      <input type="text" name="subnick" value="{{ usuario.subnick }}">
+    </label>
+    <label>Role
+      <select name="role">
+        <option value="2" {{ 'selected' if usuario.role == 2 }}>Aluno</option>
+        <option value="1" {{ 'selected' if usuario.role == 1 }}>Admin</option>
+      </select>
+    </label>
+    <div class="admin-acoes">
+      <button type="submit" class="admin-botao admin-botao-primario">Salvar</button>
+      <a class="admin-botao admin-botao-secundario" href="{{ url_for('admin_usuarios') }}">Voltar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

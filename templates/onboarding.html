@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Bem-vindo — LOG+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+{% endblock %}
+{% block content %}
+<div class="tela-app">
+  <header class="topo-azul"><h1>Passo {{ passo }} de {{ total }}</h1></header>
+  <main class="conteudo-app" style="display:flex; align-items:center; justify-content:center;">
+    <div class="cartao" style="text-align:center;">
+      <p style="font-size:56px; margin:0 0 10px;">{{ info.emoji }}</p>
+      <p class="cartao-titulo" style="font-size:18px;">{{ info.titulo }}</p>
+      <p class="cartao-corpo">{{ info.texto }}</p>
+    </div>
+  </main>
+  <div style="padding: 0 20px 24px; display:flex; flex-direction:column; gap:10px;">
+    {% if passo < total %}
+      <a class="botao-primario" style="display:block; text-align:center; text-decoration:none;" href="{{ url_for('onboarding', passo=passo + 1) }}">Próximo</a>
+      <a class="botao-secundario" style="text-align:center;" href="{{ url_for('index') }}">Pular tutorial</a>
+    {% else %}
+      <a class="botao-primario" style="display:block; text-align:center; text-decoration:none;" href="{{ url_for('index') }}">Vamos começar! 🚀</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

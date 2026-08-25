@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Perguntas do desafio {{ desafio.ordem }} — Admin LOG+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% endblock %}
+{% block content %}
+<div class="admin-shell">
+  <div class="admin-topo">
+    <h1>LOG+ Admin</h1>
+    <nav class="admin-nav">
+      <a href="{{ url_for('admin_dashboard') }}">Dashboard</a>
+      <a href="{{ url_for('admin_usuarios') }}">Usuários</a>
+      <a href="{{ url_for('admin_fases') }}">Fases</a>
+      <a href="{{ url_for('admin_recompensas') }}">Recompensas</a>
+      <a href="{{ url_for('admin_rotinas') }}">Rotinas</a>
+      <a href="{{ url_for('admin_relatorios') }}">Relatórios</a>
+      <a href="{{ url_for('logout') }}">Sair</a>
+    </nav>
+  </div>
+
+  <h2 class="admin-titulo-pagina">Perguntas — {{ desafio.fase.nome_fase }} / Desafio {{ desafio.ordem }}</h2>
+
+  <div class="admin-acoes" style="margin-bottom:16px;">
+    <a class="admin-botao admin-botao-primario" href="{{ url_for('admin_pergunta_form', id_desafio=desafio.id_desafio) }}">+ Nova pergunta</a>
+    <a class="admin-botao admin-botao-secundario" href="{{ url_for('admin_desafios', id_fase=desafio.id_fase) }}">Voltar pros desafios</a>
+  </div>
+
+  <table class="admin-tabela">
+    <tr>
+      <th>Ordem</th>
+      <th>Tipo</th>
+      <th>Enunciado</th>
+      <th>Resposta certa</th>
+      <th>Status</th>
+      <th>Ações</th>
+    </tr>
+    {% for pergunta in perguntas %}
+      <tr>
+        <td>{{ pergunta.ordem }}</td>
+        <td>{{ 'Alternativa' if pergunta.tipo.value == 'alternativa' else 'Digitada' }}</td>
+        <td>{{ pergunta.enunciado }}</td>
+        <td>{{ pergunta.resposta_correta }}</td>
+        <td><span class="selo-status {{ 'selo-ativo' if pergunta.ativo else 'selo-inativo' }}">{{ 'ativa' if pergunta.ativo else 'inativa' }}</span></td>
+        <td class="admin-acoes">
+          <a class="admin-botao admin-botao-secundario" href="{{ url_for('admin_pergunta_form', id_pergunta=pergunta.id_pergunta) }}">Editar</a>
+          {% if pergunta.ativo %}
+            <a class="admin-botao admin-botao-perigo" href="{{ url_for('admin_confirmar_status_pergunta', id_pergunta=pergunta.id_pergunta) }}">Desativar</a>
+          {% else %}
+            <form method="post" action="{{ url_for('admin_alternar_status_pergunta', id_pergunta=pergunta.id_pergunta) }}" style="display:inline;">
+              <button type="submit" class="admin-botao admin-botao-primario">Ativar</button>
+            </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

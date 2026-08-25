@@ -1,0 +1,128 @@
+:root {
+  --azul: #397ad5;
+  --amarelo: #ffd166;
+  --fundo: #f5f7fa;
+  --texto-rodape: #2e2e2e;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Lexend', 'Inter', sans-serif;
+  background: #e9ebf5;
+  display: flex;
+  justify-content: center;
+}
+
+/* ---- Telas de login/cadastro ---- */
+
+.tela-auth {
+  width: 390px;
+  min-height: 100vh;
+  background: var(--fundo);
+  display: flex;
+  flex-direction: column;
+}
+
+.auth-topo {
+  background: var(--azul);
+  padding: 26px 20px;
+}
+
+.auth-topo h1 {
+  color: #fff;
+  font-size: 22px;
+  font-weight: 400;
+  margin: 0;
+  text-align: center;
+}
+
+.auth-conteudo {
+  flex: 1;
+  padding: 40px 30px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.logo {
+  font-size: 56px;
+  margin: 40px 0 50px;
+}
+
+.logo-log {
+  color: var(--azul);
+  font-weight: 700;
+}
+
+.logo-mais {
+  color: var(--amarelo);
+  font-weight: 700;
+  margin-left: 4px;
+}
+
+.avisos {
+  list-style: none;
+  padding: 10px 14px;
+  margin: 0 0 16px;
+  background: #ffe1e1;
+  color: #b3261e;
+  border-radius: 12px;
+  font-size: 13px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.form-auth {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.form-auth input {
+  border: 1px solid rgba(0, 0, 0, 0.43);
+  border-radius: 60px;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-family: inherit;
+  background: #fff;
+}
+
+.form-auth input:focus {
+  outline: 2px solid var(--azul);
+}
+
+.botao-primario {
+  border: none;
+  border-radius: 60px;
+  background: var(--azul);
+  color: var(--fundo);
+  padding: 16px;
+  font-size: 13px;
+  font-family: inherit;
+  margin-top: 6px;
+  cursor: pointer;
+}
+
+.links-auth {
+  margin-top: 16px;
+  font-size: 12px;
+  text-align: center;
+}
+
+.links-auth a {
+  color: var(--azul);
+  text-decoration: none;
+}
+
+.auth-rodape {
+  text-align: center;
+  font-size: 12px;
+  color: var(--texto-rodape);
+  padding: 20px 0;
+}

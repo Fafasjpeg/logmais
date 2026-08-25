@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Ranking — LOG+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+{% endblock %}
+{% block content %}
+<div class="tela-app">
+  <header class="topo-azul">
+    <a class="topo-voltar" href="{{ url_for('recompensas') }}">←</a>
+    <h1>Ranking da turma</h1>
+  </header>
+  <main class="conteudo-app">
+    {% for linha in linhas %}
+      <div class="cartao">
+        <p class="cartao-titulo">{{ loop.index }}º · {{ linha.nome }} {% if linha.subnick %}({{ linha.subnick }}){% endif %}</p>
+        <p class="cartao-corpo">⭐ {{ linha.total_pontos }} pontos · 🔥 melhor sequência: {{ linha.sequencia_maxima }}</p>
+      </div>
+    {% else %}
+      <p>Ainda não tem ninguém no ranking.</p>
+    {% endfor %}
+  </main>
+  <nav class="rodape">
+    <a class="rodape-item" href="{{ url_for('agenda') }}">
+      <span class="rodape-icone">📅</span>
+      <span class="rodape-label">Agenda</span>
+    </a>
+    <a class="rodape-item" href="{{ url_for('ia_chat') }}">
+      <span class="rodape-icone">☁️</span>
+      <span class="rodape-label">Log (IA)</span>
+    </a>
+    <a class="rodape-item" href="{{ url_for('recompensas') }}">
+      <span class="rodape-icone">🏅</span>
+      <span class="rodape-label">Recompensas</span>
+    </a>
+    <a class="rodape-item" href="{{ url_for('trilha') }}">
+      <span class="rodape-icone">⭐</span>
+      <span class="rodape-label">Trilha</span>
+    </a>
+  </nav>
+</div>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Usuários — Admin LOG+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% endblock %}
+{% block content %}
+<div class="admin-shell">
+  <div class="admin-topo">
+    <h1>LOG+ Admin</h1>
+    <nav class="admin-nav">
+      <a href="{{ url_for('admin_dashboard') }}">Dashboard</a>
+      <a href="{{ url_for('admin_usuarios') }}">Usuários</a>
+      <a href="{{ url_for('admin_fases') }}">Fases</a>
+      <a href="{{ url_for('admin_recompensas') }}">Recompensas</a>
+      <a href="{{ url_for('admin_rotinas') }}">Rotinas</a>
+      <a href="{{ url_for('admin_relatorios') }}">Relatórios</a>
+      <a href="{{ url_for('logout') }}">Sair</a>
+    </nav>
+  </div>
+
+  <h2 class="admin-titulo-pagina">Usuários</h2>
+
+  <table class="admin-tabela">
+    <tr>
+      <th>Nome</th>
+      <th>E-mail</th>
+      <th>Apelido</th>
+      <th>Role</th>
+      <th>Status</th>
+      <th>Ações</th>
+    </tr>
+    {% for usuario in usuarios %}
+      <tr>
+        <td>{{ usuario.nome }}</td>
+        <td>{{ usuario.email }}</td>
+        <td>{{ usuario.subnick }}</td>
+        <td><span class="selo-status {{ 'selo-admin' if usuario.role == 1 else '' }}">{{ 'Admin' if usuario.role == 1 else 'Aluno' }}</span></td>
+        <td><span class="selo-status {{ 'selo-ativo' if usuario.ativo else 'selo-inativo' }}">{{ 'ativo' if usuario.ativo else 'inativo' }}</span></td>
+        <td class="admin-acoes">
+          <a class="admin-botao admin-botao-secundario" href="{{ url_for('admin_editar_usuario', id_usuario=usuario.id_usuario) }}">Editar</a>
+          {% if usuario.ativo %}
+            <a class="admin-botao admin-botao-perigo" href="{{ url_for('admin_confirmar_status_usuario', id_usuario=usuario.id_usuario) }}">Desativar</a>
+          {% else %}
+            <form method="post" action="{{ url_for('admin_alternar_status_usuario', id_usuario=usuario.id_usuario) }}" style="display:inline;">
+              <button type="submit" class="admin-botao admin-botao-primario">Ativar</button>
+            </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

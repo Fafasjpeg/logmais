@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}{{ fase.nome_fase }} — Pergunta {{ numero }} — LOG+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+{% endblock %}
+{% block content %}
+<div class="tela-app">
+  <header class="topo-azul">
+    <a class="topo-voltar" href="{{ url_for('jogo_fase', id_fase=fase.id_fase) }}">←</a>
+    <h1>{{ fase.nome_fase }}</h1>
+  </header>
+  <main class="conteudo-app">
+    <p class="cartao-corpo" style="text-align:center;">Pergunta {{ numero }} de {{ total }}</p>
+
+    {% if resultado %}
+      <div class="cartao {{ 'feedback-acertou' if resultado.certa else 'feedback-errou' }}">
+        <p class="cartao-titulo">{{ '✅ Você acertou!' if resultado.certa else '❌ Não foi dessa vez' }}</p>
+        <p class="cartao-corpo">{{ pergunta.enunciado }}</p>
+        {% if not resultado.certa %}
+          <p class="cartao-corpo">Sua resposta: {{ resultado.resposta_dada or '(em branco)' }}</p>
+          <p class="cartao-corpo">Resposta certa: {{ resultado.resposta_certa }}</p>
+        {% endif %}
+      </div>
+
+      {% if proximo_numero %}
+        <a class="botao-primario" style="display:block; text-align:center; text-decoration:none;" href="{{ url_for('jogo_pergunta', id_desafio=id_desafio, numero=proximo_numero) }}">Próxima pergunta</a>
+      {% else %}
+        <a class="botao-primario" style="display:block; text-align:center; text-decoration:none;" href="{{ url_for('jogo_finalizar_desafio', id_desafio=id_desafio) }}">Ver resultado</a>
+      {% endif %}
+    {% else %}
+      <div class="cartao">
+        <p class="cartao-corpo">{{ pergunta.enunciado }}</p>
+      </div>
+
+      <form method="post">
+        {% if pergunta.tipo.value == 'alternativa' %}
+          {% for alt in alternativas %}
+            <label class="opcao-resposta">
+              <input type="radio" name="resposta" value="{{ alt.letra }}" required>
+              {{ alt.letra }}) {{ alt.texto }}
+            </label>
+          {% endfor %}
+        {% else %}
+          <input type="text" name="resposta" placeholder="Sua resposta" required class="caixa-texto" style="margin-bottom:12px;">
+        {% endif %}
+        <button type="submit" class="botao-primario" style="width:100%;">Responder</button>
+      </form>
+    {% endif %}
+  </main>
+  <nav class="rodape">
+    <a class="rodape-item" href="{{ url_for('agenda') }}">
+      <span class="rodape-icone">📅</span>
+      <span class="rodape-label">Agenda</span>
+    </a>
+    <a class="rodape-item" href="{{ url_for('ia_chat') }}">
+      <span class="rodape-icone">☁️</span>
+      <span class="rodape-label">Log (IA)</span>
+    </a>
+    <a class="rodape-item" href="{{ url_for('recompensas') }}">
+      <span class="rodape-icone">🏅</span>
+      <span class="rodape-label">Recompensas</span>
+    </a>
+    <a class="rodape-item rodape-ativo" href="{{ url_for('trilha') }}">
+      <span class="rodape-icone rodape-icone-ativo">⭐</span>
+      <span class="rodape-label">Trilha</span>
+    </a>
+  </nav>
+</div>
+{% endblock %}

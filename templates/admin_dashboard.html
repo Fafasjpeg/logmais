@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Admin — LOG+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% endblock %}
+{% block content %}
+<div class="admin-shell">
+  <div class="admin-topo">
+    <h1>LOG+ Admin</h1>
+    <nav class="admin-nav">
+      <a href="{{ url_for('admin_dashboard') }}">Dashboard</a>
+      <a href="{{ url_for('admin_usuarios') }}">Usuários</a>
+      <a href="{{ url_for('admin_fases') }}">Fases</a>
+      <a href="{{ url_for('admin_recompensas') }}">Recompensas</a>
+      <a href="{{ url_for('admin_rotinas') }}">Rotinas</a>
+      <a href="{{ url_for('admin_relatorios') }}">Relatórios</a>
+      <a href="{{ url_for('logout') }}">Sair</a>
+    </nav>
+  </div>
+
+  <h2 class="admin-titulo-pagina">Olá, {{ admin.nome }} 👋</h2>
+
+  <div class="admin-cards">
+    <div class="admin-card">
+      <div class="numero">{{ total_usuarios }}</div>
+      <div class="rotulo">alunos ativos</div>
+    </div>
+    <div class="admin-card">
+      <div class="numero">{{ minutos_totais }}</div>
+      <div class="rotulo">minutos totais estudados</div>
+    </div>
+    <div class="admin-card">
+      <div class="numero">{{ pontos_distribuidos }}</div>
+      <div class="rotulo">pontos distribuídos</div>
+    </div>
+    <div class="admin-card">
+      <div class="numero">{{ desafios_concluidos }}</div>
+      <div class="rotulo">desafios concluídos</div>
+    </div>
+    <div class="admin-card">
+      <div class="numero">{{ total_fases }}</div>
+      <div class="rotulo">fases ativas</div>
+    </div>
+    <div class="admin-card">
+      <div class="numero">{{ total_desafios }}</div>
+      <div class="rotulo">desafios ativos</div>
+    </div>
+    <div class="admin-card">
+      <div class="numero">{{ total_perguntas }}</div>
+      <div class="rotulo">perguntas ativas</div>
+    </div>
+  </div>
+</div>
+{% endblock %}

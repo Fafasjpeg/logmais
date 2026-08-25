@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Trilha — LOG+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/trilha.css') }}">
+{% endblock %}
+{% block content %}
+<div class="tela-trilha">
+  <header class="trilha-topo">
+    <a class="avatar" href="{{ url_for('perfil') }}">
+      <img src="{{ url_for('static', filename='img/trilha/avatar_bg.svg') }}" alt="">
+      <span class="avatar-letra">{{ usuario.nome[0]|upper }}</span>
+    </a>
+    <div class="selo selo-pontos">
+      <span>⭐</span>
+      <strong>{{ desempenho.total_pontos if desempenho else 0 }}</strong>
+    </div>
+    <div class="selo selo-sequencia">
+      <span>🔥</span>
+      <strong>{{ desempenho.sequencia_atual if desempenho else 0 }}</strong>
+    </div>
+    <div class="selo-subnick">🏅 {{ usuario.subnick }}</div>
+  </header>
+
+  <main class="trilha-caminho">
+    <div class="trilha-caminho-inner">
+      {% for item in fases %}
+        {% set layout = item.layout %}
+        {% if layout.conector %}
+          <img
+            class="fase-conector"
+            src="{{ url_for('static', filename='img/trilha/' ~ layout.conector.img) }}"
+            style="left: {{ layout.conector.x }}px; top: {{ layout.conector.y }}px; width: {{ layout.conector.w }}px; height: {{ layout.conector.h }}px;"
+            alt="">
+        {% endif %}
+
+        <a class="fase-no" href="{{ url_for('jogo_fase', id_fase=item.id_fase) }}" style="left: {{ layout.x }}px; top: {{ layout.y }}px;">
+          <img class="fase-icone" src="{{ url_for('static', filename='img/trilha/fase_' ~ item.estado ~ '.svg') }}" alt="">
+          <span class="fase-emoji">{{ '🔒' if item.estado == 'bloqueada' else item.emoji }}</span>
+          <span class="fase-badge">
+            <img src="{{ url_for('static', filename='img/trilha/badge_' ~ item.estado ~ '.svg') }}" alt="">
+            <span class="fase-badge-num">{{ item.ordem }}</span>
+          </span>
+          <p class="fase-estrelas">{{ '⭐' * item.estrelas }}{{ '☆' * (item.total_estrelas - item.estrelas) }}</p>
+          <p class="fase-nome">{{ item.nome }}</p>
+        </a>
+      {% endfor %}
+
+      <p class="trilha-dica">↓ role para ver mais fases</p>
+    </div>
+  </main>
+
+  <nav class="rodape">
+    <a class="rodape-item" href="{{ url_for('agenda') }}">
+      <span class="rodape-icone">📅</span>
+      <span class="rodape-label">Agenda</span>
+    </a>
+    <a class="rodape-item" href="{{ url_for('ia_chat') }}">
+      <span class="rodape-icone">☁️</span>
+      <span class="rodape-label">Log (IA)</span>
+    </a>
+    <a class="rodape-item" href="{{ url_for('recompensas') }}">
+      <span class="rodape-icone">🏅</span>
+      <span class="rodape-label">Recompensas</span>
+    </a>
+    <a class="rodape-item rodape-ativo" href="{{ url_for('trilha') }}">
+      <span class="rodape-icone rodape-icone-ativo">⭐</span>
+      <span class="rodape-label">Trilha</span>
+    </a>
+  </nav>
+</div>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Fase concluída — LOG+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+{% endblock %}
+{% block content %}
+<div class="tela-app">
+  <header class="topo-azul"><h1>Fase concluída!</h1></header>
+  <main class="conteudo-app">
+    <div class="cartao feedback-acertou" style="text-align:center;">
+      <p class="cartao-titulo">🏆 {{ fase.nome_fase }} completa!</p>
+      <p class="cartao-corpo">⏱️ Tempo corrido: {{ tempo_total // 60 }}:{{ '%02d'|format(tempo_total % 60) }}</p>
+      <p class="cartao-corpo">⭐ {{ pontos_total }} pontos ganhos</p>
+    </div>
+    <a class="botao-primario" style="display:block; text-align:center; text-decoration:none;" href="{{ url_for('trilha') }}">Voltar pra trilha</a>
+  </main>
+  <nav class="rodape">
+    <a class="rodape-item" href="{{ url_for('agenda') }}">
+      <span class="rodape-icone">📅</span>
+      <span class="rodape-label">Agenda</span>
+    </a>
+    <a class="rodape-item" href="{{ url_for('ia_chat') }}">
+      <span class="rodape-icone">☁️</span>
+      <span class="rodape-label">Log (IA)</span>
+    </a>
+    <a class="rodape-item" href="{{ url_for('recompensas') }}">
+      <span class="rodape-icone">🏅</span>
+      <span class="rodape-label">Recompensas</span>
+    </a>
+    <a class="rodape-item rodape-ativo" href="{{ url_for('trilha') }}">
+      <span class="rodape-icone rodape-icone-ativo">⭐</span>
+      <span class="rodape-label">Trilha</span>
+    </a>
+  </nav>
+</div>
+{% endblock %}

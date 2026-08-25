@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Login — LOG+{% endblock %}
+{% block content %}
+<div class="tela-auth">
+  <header class="auth-topo">
+    <h1>Seja bem-vindo!</h1>
+  </header>
+  <main class="auth-conteudo">
+    <p class="logo"><span class="logo-log">LOG</span><span class="logo-mais">+</span></p>
+
+    {% with mensagens = get_flashed_messages() %}
+      {% if mensagens %}
+        <ul class="avisos">
+          {% for mensagem in mensagens %}<li>{{ mensagem }}</li>{% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+
+    <form method="post" class="form-auth">
+      <input type="email" name="email" placeholder="E-mail" required>
+      <input type="password" name="senha" placeholder="Senha" required>
+      <button type="submit" class="botao-primario">Login</button>
+    </form>
+
+    <p class="links-auth">
+      <a href="{{ url_for('cadastro') }}">Criar Conta</a> | <a href="{{ url_for('recuperar_senha') }}">Esqueceu a senha?</a>
+    </p>
+  </main>
+  <footer class="auth-rodape">© 2026 Log+. Todos os direitos reservados.</footer>
+</div>
+{% endblock %}

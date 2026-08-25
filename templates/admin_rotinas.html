@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Rotinas dos alunos — Admin LOG+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% endblock %}
+{% block content %}
+<div class="admin-shell">
+  <div class="admin-topo">
+    <h1>LOG+ Admin</h1>
+    <nav class="admin-nav">
+      <a href="{{ url_for('admin_dashboard') }}">Dashboard</a>
+      <a href="{{ url_for('admin_usuarios') }}">Usuários</a>
+      <a href="{{ url_for('admin_fases') }}">Fases</a>
+      <a href="{{ url_for('admin_recompensas') }}">Recompensas</a>
+      <a href="{{ url_for('admin_rotinas') }}">Rotinas</a>
+      <a href="{{ url_for('admin_relatorios') }}">Relatórios</a>
+      <a href="{{ url_for('logout') }}">Sair</a>
+    </nav>
+  </div>
+
+  <h2 class="admin-titulo-pagina">Rotinas e agendas dos alunos</h2>
+
+  <table class="admin-tabela">
+    <tr>
+      <th>Aluno</th>
+      <th>Período</th>
+      <th>Minutos/dia</th>
+      <th>Dias</th>
+      <th>Ações</th>
+    </tr>
+    {% for usuario, rotina in linhas %}
+      <tr>
+        <td>{{ usuario.nome }}</td>
+        <td>{{ rotina.periodo_dia.value }}</td>
+        <td>{{ rotina.minutos_por_dia }}</td>
+        <td>{{ rotina.dias_disponiveis }}</td>
+        <td class="admin-acoes">
+          <a class="admin-botao admin-botao-secundario" href="{{ url_for('admin_rotina_detalhe', id_usuario=usuario.id_usuario) }}">Ver agenda</a>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5">Nenhum aluno preencheu a rotina ainda.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

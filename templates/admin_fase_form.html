@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar fase' if fase else 'Nova fase' }} — Admin LOG+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% endblock %}
+{% block content %}
+<div class="admin-shell">
+  <div class="admin-topo">
+    <h1>LOG+ Admin</h1>
+    <nav class="admin-nav">
+      <a href="{{ url_for('admin_dashboard') }}">Dashboard</a>
+      <a href="{{ url_for('admin_usuarios') }}">Usuários</a>
+      <a href="{{ url_for('admin_fases') }}">Fases</a>
+      <a href="{{ url_for('admin_recompensas') }}">Recompensas</a>
+      <a href="{{ url_for('admin_rotinas') }}">Rotinas</a>
+      <a href="{{ url_for('admin_relatorios') }}">Relatórios</a>
+      <a href="{{ url_for('logout') }}">Sair</a>
+    </nav>
+  </div>
+
+  <h2 class="admin-titulo-pagina">{{ 'Editar fase' if fase else 'Nova fase' }}</h2>
+
+  {% with mensagens = get_flashed_messages() %}
+    {% if mensagens %}<ul class="avisos">{% for m in mensagens %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
+  {% endwith %}
+
+  <form method="post" class="admin-form">
+    <label>Nome da fase
+      <input type="text" name="nome_fase" value="{{ fase.nome_fase if fase else '' }}" required>
+    </label>
+    <label>Ordem na trilha
+      <input type="number" name="ordem" min="1" value="{{ fase.ordem if fase else '' }}" required>
+    </label>
+    <div class="admin-acoes">
+      <button type="submit" class="admin-botao admin-botao-primario">Salvar</button>
+      <a class="admin-botao admin-botao-secundario" href="{{ url_for('admin_fases') }}">Voltar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

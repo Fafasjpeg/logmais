@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ fase.nome_fase }} — LOG+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+{% endblock %}
+{% block content %}
+<div class="tela-app">
+  <header class="topo-azul">
+    <a class="topo-voltar" href="{{ url_for('trilha') }}">←</a>
+    <h1>{{ fase.nome_fase }}</h1>
+  </header>
+  <main class="conteudo-app">
+    {% with mensagens = get_flashed_messages() %}
+      {% if mensagens %}<ul class="avisos">{% for m in mensagens %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
+    {% endwith %}
+
+    {% for item in desafios %}
+      <div class="cartao {{ 'cartao-bloqueado' if item.estado == 'bloqueada' else '' }}">
+        <p class="cartao-titulo">Desafio {{ item.desafio.ordem }} · {{ '⭐' * item.desafio.estrelas }}</p>
+        <p class="cartao-corpo">{{ item.desafio.pontos }} pontos · {{ item.desafio.tempo_limite_seg }}s</p>
+        <a class="botao-primario" style="display:block; text-align:center; text-decoration:none;" href="{{ url_for('jogo_desafio', id_desafio=item.desafio.id_desafio) }}">
+          {% if item.estado == 'bloqueada' %}
+            🔒 Bloqueado
+          {% else %}
+            {{ 'Concluído — jogar de novo' if item.estado == 'completa' else 'Começar' }}
+          {% endif %}
+        </a>
+      </div>
+    {% endfor %}
+  </main>
+  <nav class="rodape">
+    <a class="rodape-item" href="{{ url_for('agenda') }}">
+      <span class="rodape-icone">📅</span>
+      <span class="rodape-label">Agenda</span>
+    </a>
+    <a class="rodape-item" href="{{ url_for('ia_chat') }}">
+      <span class="rodape-icone">☁️</span>
+      <span class="rodape-label">Log (IA)</span>
+    </a>
+    <a class="rodape-item" href="{{ url_for('recompensas') }}">
+      <span class="rodape-icone">🏅</span>
+      <span class="rodape-label">Recompensas</span>
+    </a>
+    <a class="rodape-item rodape-ativo" href="{{ url_for('trilha') }}">
+      <span class="rodape-icone rodape-icone-ativo">⭐</span>
+      <span class="rodape-label">Trilha</span>
+    </a>
+  </nav>
+</div>
+{% endblock %}
