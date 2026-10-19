@@ -17,11 +17,13 @@ body {
   justify-content: center;
 }
 
-/* ---- Telas de login/cadastro ---- */
+/* telas de login/cadastro */
 
 .tela-auth {
-  width: 390px;
+  width: 100%;
+  max-width: 390px;
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--fundo);
   display: flex;
   flex-direction: column;
@@ -76,6 +78,12 @@ body {
   max-width: 320px;
 }
 
+/* aviso de sucesso fica verde em vez de vermelho */
+.avisos-sucesso {
+  background: #eafbea;
+  color: #1e7a2e;
+}
+
 .form-auth {
   width: 100%;
   max-width: 320px;
@@ -125,4 +133,43 @@ body {
   font-size: 12px;
   color: var(--texto-rodape);
   padding: 20px 0;
+}
+
+/* textos curtos que explicam a tela de cadastro e de codigo */
+.texto-auth {
+  width: 100%;
+  max-width: 320px;
+  margin: 0 0 14px;
+  font-size: 13px;
+  text-align: center;
+}
+
+/* lembrete de olhar o spam na tela do codigo */
+.dica-spam {
+  width: 100%;
+  max-width: 320px;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  background: #fff6dc;
+  color: #6b5200;
+  border-radius: 12px;
+  font-size: 13px;
+}
+
+/* campo onde o aluno digita os 6 numeros do codigo */
+.form-auth input.campo-codigo {
+  text-align: center;
+  font-size: 22px;
+  letter-spacing: 8px;
+}
+
+/* botao que parece link usado em reenviar codigo */
+.botao-link {
+  border: none;
+  background: none;
+  color: var(--azul);
+  font-family: inherit;
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
 }

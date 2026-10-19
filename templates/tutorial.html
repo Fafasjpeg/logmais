@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Tutorial de {{ fase.nome_fase }} — LOG+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tutorial.css') }}">
+{% endblock %}
+{% block content %}
+{# tela do tutorial de calculo tocar na imagem ou no texto vai pra proxima tela #}
+{# as setas as bolinhas e o botao pular ficam fora da area de toque pra nao avancar duas vezes #}
+<div class="tela-tutorial">
+
+  <header class="tutorial-topo">
+    <div>
+      <p class="tutorial-etiqueta">Tutorial de cálculo</p>
+      <h1 class="tutorial-fase">{{ fase.nome_fase }}</h1>
+    </div>
+    <a class="tutorial-pular" href="{{ url_de_pular }}">Pular tutorial</a>
+  </header>
+
+  <main class="tutorial-palco">
+    <a class="tutorial-area-de-toque" href="{{ url_da_proxima_tela }}" aria-label="{{ 'Concluir o tutorial e abrir a fase' if e_a_ultima_tela else 'Ir para a próxima tela' }}">
+      <img class="tutorial-imagem" src="{{ url_for('static', filename=tela.caminho_imagem) }}" alt="{{ tela.titulo or 'Resolução passo a passo' }}">
+      {% if tela.titulo %}<h2 class="tutorial-titulo">{{ tela.titulo }}</h2>{% endif %}
+      {% if tela.texto %}<p class="tutorial-texto">{{ tela.texto }}</p>{% endif %}
+      <p class="tutorial-dica">
+        {% if e_a_ultima_tela %}Toque na tela para abrir a fase{% else %}Toque na tela para ir para a próxima{% endif %}
+      </p>
+    </a>
+
+    {% if url_da_tela_anterior %}
+      <a class="tutorial-seta tutorial-seta-esquerda" href="{{ url_da_tela_anterior }}" aria-label="Voltar para a tela anterior">&#8249;</a>
+    {% endif %}
+    <a class="tutorial-seta tutorial-seta-direita" href="{{ url_da_proxima_tela }}" aria-label="{{ 'Concluir o tutorial e abrir a fase' if e_a_ultima_tela else 'Ir para a próxima tela' }}">&#8250;</a>
+  </main>
+
+  <footer class="tutorial-rodape">
+    <p class="tutorial-contador">Tela {{ numero }} de {{ total_de_telas }}</p>
+    <nav class="tutorial-bolinhas" aria-label="Telas do tutorial">
+      {% for bolinha in bolinhas %}
+        <a class="tutorial-bolinha {{ 'tutorial-bolinha-atual' if bolinha.e_a_atual else '' }}" href="{{ bolinha.url }}" aria-label="Ir para a tela {{ bolinha.numero }}"></a>
+      {% endfor %}
+    </nav>
+  </footer>
+
+</div>
+{% endblock %}

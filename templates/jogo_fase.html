@@ -14,15 +14,29 @@
       {% if mensagens %}<ul class="avisos">{% for m in mensagens %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
     {% endwith %}
 
+    {# progresso da fase conta os desafios ja concluidos #}
+    {% set feitos = desafios|selectattr('estado', 'equalto', 'completa')|list|length %}
+    {% set total_desafios = desafios|length %}
+    {% set percentual = ((feitos * 100 / total_desafios)|round|int) if total_desafios else 0 %}
+    <p class="progresso-texto">Progresso da fase: {{ feitos }} de {{ total_desafios }} desafios</p>
+    <div class="barra-progresso" role="progressbar" aria-label="Progresso da fase" aria-valuemin="0" aria-valuemax="{{ total_desafios }}" aria-valuenow="{{ feitos }}">
+      <div class="barra-progresso-preenchida" style="width: {{ percentual }}%;"></div>
+    </div>
+
+    <p class="cartao-corpo">Faça os desafios em ordem. Para concluir um desafio você precisa acertar todas as perguntas dele.</p>
+    {% if tem_tutorial %}
+      <a class="botao-secundario" href="{{ url_for('tutorial_fase', id_fase=fase.id_fase, numero=1) }}">Ver tutorial de cálculo desta fase</a>
+    {% endif %}
+
     {% for item in desafios %}
       <div class="cartao {{ 'cartao-bloqueado' if item.estado == 'bloqueada' else '' }}">
-        <p class="cartao-titulo">Desafio {{ item.desafio.ordem }} · {{ '⭐' * item.desafio.estrelas }}</p>
-        <p class="cartao-corpo">{{ item.desafio.pontos }} pontos · {{ item.desafio.tempo_limite_seg }}s</p>
+        <p class="cartao-titulo">Desafio {{ item.desafio.ordem }} · dificuldade {{ item.desafio.estrelas }} de 5</p>
+        <p class="cartao-corpo">Vale {{ item.desafio.pontos }} pontos na primeira vez que você acertar tudo{% if not session.get('sem_pressao') %} · tempo de referência: {{ item.desafio.tempo_limite_seg }} segundos{% endif %}</p>
         <a class="botao-primario" style="display:block; text-align:center; text-decoration:none;" href="{{ url_for('jogo_desafio', id_desafio=item.desafio.id_desafio) }}">
           {% if item.estado == 'bloqueada' %}
-            🔒 Bloqueado
+            Bloqueado: conclua o desafio anterior
           {% else %}
-            {{ 'Concluído — jogar de novo' if item.estado == 'completa' else 'Começar' }}
+            {{ 'Concluído: jogar de novo (sem novos pontos)' if item.estado == 'completa' else 'Começar desafio' }}
           {% endif %}
         </a>
       </div>
@@ -30,19 +44,19 @@
   </main>
   <nav class="rodape">
     <a class="rodape-item" href="{{ url_for('agenda') }}">
-      <span class="rodape-icone">📅</span>
+      <span class="rodape-icone"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_agenda.png') }}" alt=""></span>
       <span class="rodape-label">Agenda</span>
     </a>
     <a class="rodape-item" href="{{ url_for('ia_chat') }}">
-      <span class="rodape-icone">☁️</span>
+      <span class="rodape-icone"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_log.png') }}" alt=""></span>
       <span class="rodape-label">Log (IA)</span>
     </a>
     <a class="rodape-item" href="{{ url_for('recompensas') }}">
-      <span class="rodape-icone">🏅</span>
+      <span class="rodape-icone"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_recompensas.png') }}" alt=""></span>
       <span class="rodape-label">Recompensas</span>
     </a>
     <a class="rodape-item rodape-ativo" href="{{ url_for('trilha') }}">
-      <span class="rodape-icone rodape-icone-ativo">⭐</span>
+      <span class="rodape-icone rodape-icone-ativo"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_trilha.png') }}" alt=""></span>
       <span class="rodape-label">Trilha</span>
     </a>
   </nav>

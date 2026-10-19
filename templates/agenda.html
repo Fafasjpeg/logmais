@@ -17,11 +17,13 @@
       {% endif %}
     {% endwith %}
 
+    <p class="cartao-corpo">Estes são seus dias de estudo da semana. Toque em "Iniciar estudo" para abrir a trilha de fases.</p>
+
     {% for bloco in blocos %}
       <div class="cartao">
         <p class="cartao-titulo">{{ dia_label[bloco.dia_semana.value] }}</p>
-        <p class="cartao-corpo">{{ bloco.minutos }} min · {{ 'concluída ✅' if bloco.status.value == 'concluida' else 'pendente' }}</p>
-        <a class="botao-primario" style="display:block; text-align:center; text-decoration:none;" href="{{ url_for('trilha') }}">iniciar</a>
+        <p class="cartao-corpo">{{ bloco.minutos }} min · {{ 'concluída' if bloco.status.value == 'concluida' else 'pendente' }}</p>
+        <a class="botao-primario" style="display:block; text-align:center; text-decoration:none;" href="{{ url_for('trilha') }}">Iniciar estudo</a>
       </div>
     {% else %}
       <p>Você ainda não tem dias de estudo configurados.</p>
@@ -38,19 +40,19 @@
 
   <nav class="rodape">
     <a class="rodape-item rodape-ativo" href="{{ url_for('agenda') }}">
-      <span class="rodape-icone rodape-icone-ativo">📅</span>
+      <span class="rodape-icone rodape-icone-ativo"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_agenda.png') }}" alt=""></span>
       <span class="rodape-label">Agenda</span>
     </a>
     <a class="rodape-item" href="{{ url_for('ia_chat') }}">
-      <span class="rodape-icone">☁️</span>
+      <span class="rodape-icone"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_log.png') }}" alt=""></span>
       <span class="rodape-label">Log (IA)</span>
     </a>
     <a class="rodape-item" href="{{ url_for('recompensas') }}">
-      <span class="rodape-icone">🏅</span>
+      <span class="rodape-icone"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_recompensas.png') }}" alt=""></span>
       <span class="rodape-label">Recompensas</span>
     </a>
     <a class="rodape-item" href="{{ url_for('trilha') }}">
-      <span class="rodape-icone">⭐</span>
+      <span class="rodape-icone"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_trilha.png') }}" alt=""></span>
       <span class="rodape-label">Trilha</span>
     </a>
   </nav>

@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Feedback — LOG+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+{% endblock %}
+{% block content %}
+<div class="tela-app">
+  <header class="topo-azul">
+    <a class="topo-voltar" href="{{ url_for('perfil') }}">←</a>
+    <h1>Feedback</h1>
+  </header>
+  <main class="conteudo-app">
+    {% with mensagens = get_flashed_messages(with_categories=true) %}
+      {% if mensagens %}
+        <ul class="avisos {{ 'avisos-sucesso' if mensagens[0][0] == 'sucesso' }}">{% for categoria, m in mensagens %}<li>{{ m }}</li>{% endfor %}</ul>
+      {% endif %}
+    {% endwith %}
+
+    {% if ja_enviou_neste_mes %}
+      <div class="cartao">
+        <p class="cartao-titulo">Você já enviou o feedback deste mês</p>
+        <p class="cartao-corpo">Obrigado por ajudar! Você poderá enviar outro a partir de {{ data_do_proximo_envio }}.</p>
+      </div>
+      <a class="botao-secundario" href="{{ url_for('perfil') }}">Voltar para o perfil</a>
+    {% else %}
+      <div class="cartao">
+        <p class="cartao-titulo">Como foi usar o LOG+?</p>
+        <p class="cartao-corpo">Conte o que ajuda e o que atrapalha na hora de usar o app. Você pode enviar um feedback por mês.</p>
+      </div>
+
+      <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="cartao" role="radiogroup" aria-labelledby="titulo-nota">
+          <p class="cartao-titulo" id="titulo-nota">Foi fácil usar o app?</p>
+          {% for valor, rotulo in notas %}
+            <label class="opcao-resposta">
+              <input type="radio" name="nota" value="{{ valor }}" {{ 'checked' if nota_escolhida == valor|string }}>
+              {{ rotulo }}
+            </label>
+          {% endfor %}
+        </div>
+
+        <div class="cartao" role="radiogroup" aria-labelledby="titulo-categoria">
+          <p class="cartao-titulo" id="titulo-categoria">O que mais atrapalhou?</p>
+          {% for valor, rotulo in categorias %}
+            <label class="opcao-resposta">
+              <input type="radio" name="categoria" value="{{ valor }}" {{ 'checked' if categoria_escolhida == valor }}>
+              {{ rotulo }}
+            </label>
+          {% endfor %}
+        </div>
+
+        <div class="cartao">
+          <p class="cartao-titulo"><label for="texto-feedback">Quer contar mais? (opcional)</label></p>
+          <textarea id="texto-feedback" name="texto" class="caixa-texto" rows="5" maxlength="{{ maximo_caracteres }}" placeholder="Escreva aqui">{{ texto_digitado }}</textarea>
+          <p class="cartao-corpo" style="margin-top:8px;">Máximo de {{ maximo_caracteres }} caracteres.</p>
+        </div>
+
+        <div class="cartao">
+          <p class="cartao-titulo">Aviso de privacidade</p>
+          <p class="cartao-corpo">O que você escrever será lido pela equipe do projeto LOG+ e fica ligado ao seu nome. Não escreva dados pessoais, como telefone, endereço ou senhas.</p>
+          <p class="cartao-corpo">Lemos as mensagens para melhorar o app, mas não respondemos cada uma individualmente.</p>
+        </div>
+
+        <button type="submit" class="botao-primario" style="width:100%; margin-bottom:12px;">Enviar Feedback</button>
+      </form>
+    {% endif %}
+  </main>
+
+  <nav class="rodape">
+    <a class="rodape-item" href="{{ url_for('agenda') }}">
+      <span class="rodape-icone"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_agenda.png') }}" alt=""></span>
+      <span class="rodape-label">Agenda</span>
+    </a>
+    <a class="rodape-item" href="{{ url_for('ia_chat') }}">
+      <span class="rodape-icone"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_log.png') }}" alt=""></span>
+      <span class="rodape-label">Log (IA)</span>
+    </a>
+    <a class="rodape-item" href="{{ url_for('recompensas') }}">
+      <span class="rodape-icone"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_recompensas.png') }}" alt=""></span>
+      <span class="rodape-label">Recompensas</span>
+    </a>
+    <a class="rodape-item" href="{{ url_for('trilha') }}">
+      <span class="rodape-icone"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_trilha.png') }}" alt=""></span>
+      <span class="rodape-label">Trilha</span>
+    </a>
+  </nav>
+</div>
+{% endblock %}

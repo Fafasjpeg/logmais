@@ -16,7 +16,10 @@
       {% endif %}
     {% endwith %}
 
+    <p class="texto-auth">Vamos enviar um código de 6 números para o seu e-mail. Digite um e-mail que você consiga abrir.</p>
+
     <form method="post" class="form-auth">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="text" name="nome" placeholder="Nome" required>
       <input type="email" name="email" placeholder="E-mail" required>
       <input type="password" name="senha" placeholder="Senha" required>

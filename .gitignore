@@ -1,6 +1,19 @@
+# ambiente virtual e cache do python
 .venv/
 __pycache__/
 *.pyc
+
+# segredos  o .env.example e liberado porque nao tem segredo
 .env
+!.env.example
+
+# arquivos locais do projeto
 CLAUDE.md
 database
+
+# editores e sistema operacional
+.vscode/
+.idea/
+*.log
+Thumbs.db
+desktop.ini

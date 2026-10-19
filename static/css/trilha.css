@@ -1,12 +1,14 @@
 .tela-trilha {
-  width: 390px;
+  width: 100%;
+  max-width: 390px;
   height: 100vh;
+  height: 100dvh;
   background: #f2f3fa;
   display: flex;
   flex-direction: column;
 }
 
-/* ---- Cabeçalho ---- */
+/* cabecalho */
 
 .trilha-topo {
   position: relative;
@@ -18,7 +20,7 @@
 
 .avatar {
   position: absolute;
-  left: 305px;
+  right: 29px;
   top: 26px;
   width: 56px;
   height: 56px;
@@ -44,7 +46,6 @@
 
 .selo {
   position: absolute;
-  top: 39px;
   height: 34px;
   display: flex;
   align-items: center;
@@ -56,19 +57,28 @@
   color: #262633;
 }
 
+/* duas linhas de selos sequencia e pontos em cima dias seguidos embaixo */
 .selo-pontos {
-  left: 105px;
+  top: 14px;
+  left: 150px;
   background: #fff2bf;
 }
 
 .selo-sequencia {
-  left: 34px;
+  top: 14px;
+  left: 16px;
   background: #ffe5cc;
+}
+
+.selo-dias {
+  top: 58px;
+  left: 16px;
+  background: #dcebff;
 }
 
 .selo-subnick {
   position: absolute;
-  left: 279px;
+  right: 11px;
   top: 67px;
   height: 26px;
   display: flex;
@@ -79,9 +89,38 @@
   color: #2e6b38;
   font-size: 12px;
   font-weight: 600;
+  max-width: 100px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-/* ---- Caminho das fases (rolável) ---- */
+/* legenda dos estados da fase */
+
+.trilha-legenda {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 8px 10px;
+  background: #fff;
+  border-bottom: 1px solid #e5e5f2;
+  font-size: 11px;
+  color: #404252;
+}
+
+.legenda-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legenda-item img {
+  width: 18px;
+  height: 18px;
+}
+
+/* caminho das fases rolavel */
 
 .trilha-caminho {
   flex: 1;
@@ -98,21 +137,24 @@
 .trilha-dica {
   position: absolute;
   left: 50%;
-  top: 635px;
+  top: 60px;
   transform: translateX(-50%);
-  width: 350px;
+  width: 90%;
   margin: 0;
   text-align: center;
   font-size: 12px;
   color: #999cad;
 }
 
+/* a linha pontilhada fica atras dos circulos das fases */
 .fase-conector {
   position: absolute;
+  z-index: 0;
 }
 
 .fase-no {
   position: absolute;
+  z-index: 1;
   width: 88px;
   height: 88px;
 }
@@ -123,13 +165,15 @@
   display: block;
 }
 
-.fase-emoji {
+.fase-simbolo {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-family: 'Archivo Black', 'Inter', sans-serif;
   font-size: 32px;
+  color: #404252;
 }
 
 .fase-badge {
@@ -157,31 +201,101 @@
   color: #40404d;
 }
 
-.fase-estrelas {
+/* os tres textos abaixo de cada fase nome progresso e estado
+   o fundo da cor da pagina esconde a linha pontilhada que passa por tras */
+
+.fase-nome,
+.fase-progresso,
+.fase-estado {
   position: absolute;
   left: 50%;
-  top: 94px;
   transform: translateX(-50%);
-  width: 140px;
+  width: max-content;
+  max-width: 170px;
   margin: 0;
+  padding: 0 4px;
   text-align: center;
-  font-size: 10px;
-  white-space: nowrap;
+  background: #f2f3fa;
 }
 
 .fase-nome {
-  position: absolute;
-  left: 50%;
-  top: 109px;
-  transform: translateX(-50%);
-  width: 160px;
-  margin: 0;
-  text-align: center;
+  top: 94px;
   font-size: 13px;
   font-weight: 600;
   color: #404252;
 }
 
-/* O rodapé de navegação (.rodape / .rodape-item / ...) e o card de
-   avisos (.avisos) agora ficam em static/css/app.css, compartilhado
-   com as outras telas depois do login. */
+.fase-progresso {
+  top: 112px;
+  font-size: 11px;
+  color: #6b6e80;
+}
+
+.fase-estado {
+  top: 130px;
+  padding: 1px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.fase-estado-completa {
+  background: #d9edd9;
+  color: #2e6b38;
+}
+
+.fase-estado-atual {
+  background: #fff2cc;
+  color: #a35f00;
+}
+
+.fase-estado-bloqueada {
+  background: #e5e5f2;
+  color: #6b6e80;
+}
+
+.trilha-vazia {
+  padding: 30px 24px;
+  text-align: center;
+  font-size: 14px;
+  color: #404252;
+}
+
+/* o rodape de navegacao .rodape / .rodape item / e o card de
+   avisos .avisos agora ficam em static/css/app.css compartilhado
+   com as outras telas depois do login */
+
+/* telas mais estreitas que 390 pixels
+   as fases da trilha ficam em posicoes fixas desenhadas pra 390 entao o caminho inteiro encolhe junto
+   cada faixa de largura usa um zoom que cabe na tela */
+@media (max-width: 389px) {
+  .trilha-caminho-inner { zoom: 0.97; }
+}
+
+@media (max-width: 379px) {
+  .trilha-caminho-inner { zoom: 0.94; }
+}
+
+@media (max-width: 369px) {
+  .trilha-caminho-inner { zoom: 0.91; }
+}
+
+@media (max-width: 359px) {
+  .trilha-caminho-inner { zoom: 0.88; }
+  /* o selo de pontos sai de cima do avatar */
+  .selo-pontos { left: 130px; padding: 0 8px; }
+}
+
+@media (max-width: 349px) {
+  .trilha-caminho-inner { zoom: 0.85; }
+}
+
+@media (max-width: 339px) {
+  .trilha-caminho-inner { zoom: 0.82; }
+}
+
+@media (max-width: 329px) {
+  .trilha-caminho-inner { zoom: 0.79; }
+  .selo-pontos { left: 130px; font-size: 12px; }
+  .selo-sequencia, .selo-dias { left: 10px; font-size: 12px; }
+}

@@ -1,0 +1,325 @@
+/* acessibilidade tamanho da fonte tema de alto contraste e menos animacao
+   carregado por ultimo no base.html pra sobrescrever os outros arquivos
+   o body ganha as classes tema-padrao ou tema-contraste e fonte-normal fonte-grande ou fonte-muito_grande */
+
+/* ---------- tamanho da fonte ----------
+   os tamanhos originais estao em px nos outros arquivos entao aqui cada
+   grupo repete o tamanho original multiplicado pela escala */
+
+body.fonte-grande { --escala-fonte: 1.2; }
+body.fonte-muito_grande { --escala-fonte: 1.4; }
+
+body:not(.fonte-normal) .cartao-corpo,
+body:not(.fonte-normal) .cartao-titulo,
+body:not(.fonte-normal) .chip-dia,
+body:not(.fonte-normal) .bolha-log .texto,
+body:not(.fonte-normal) .bolha-usuario .texto,
+body:not(.fonte-normal) .dica-botao,
+body:not(.fonte-normal) .dica-texto {
+  font-size: calc(14px * var(--escala-fonte));
+}
+
+body:not(.fonte-normal) .opcao-resposta,
+body:not(.fonte-normal) .caixa-texto,
+body:not(.fonte-normal) .botao-secundario,
+body:not(.fonte-normal) .botao-primario,
+body:not(.fonte-normal) .chip,
+body:not(.fonte-normal) .form-auth input,
+body:not(.fonte-normal) .avisos,
+body:not(.fonte-normal) .progresso-texto {
+  font-size: calc(13px * var(--escala-fonte));
+}
+
+body:not(.fonte-normal) .selo-card-numero {
+  font-size: calc(28px * var(--escala-fonte));
+}
+
+body:not(.fonte-normal) .selo-card-rotulo {
+  font-size: calc(13px * var(--escala-fonte));
+}
+
+body:not(.fonte-normal) .selo-card-detalhe {
+  font-size: calc(12px * var(--escala-fonte));
+}
+
+/* tela da pergunta tem tamanhos proprios maiores */
+body:not(.fonte-normal) .pergunta-enunciado {
+  font-size: calc(18px * var(--escala-fonte));
+}
+
+body:not(.fonte-normal) .area-pergunta .opcao-resposta,
+body:not(.fonte-normal) .area-pergunta .botao-primario {
+  font-size: calc(15px * var(--escala-fonte));
+}
+
+body:not(.fonte-normal) .area-pergunta .caixa-texto {
+  font-size: calc(16px * var(--escala-fonte));
+}
+
+/* telas de resultado tambem tem tamanhos proprios maiores */
+body:not(.fonte-normal) .area-resultado .cartao-titulo {
+  font-size: calc(20px * var(--escala-fonte));
+}
+
+body:not(.fonte-normal) .area-resultado .cartao-corpo,
+body:not(.fonte-normal) .area-resultado .botao-primario {
+  font-size: calc(15px * var(--escala-fonte));
+}
+
+/* tela do log ia */
+body:not(.fonte-normal) .ia-data,
+body:not(.fonte-normal) .ia-status {
+  font-size: calc(12px * var(--escala-fonte));
+}
+
+body:not(.fonte-normal) .ia-compra summary {
+  font-size: calc(13px * var(--escala-fonte));
+}
+
+/* o texto maior precisa de mais espaco entre as linhas */
+body:not(.fonte-normal) .cartao-corpo,
+body:not(.fonte-normal) .opcao-resposta,
+body:not(.fonte-normal) .dica-texto {
+  line-height: 1.5;
+}
+
+/* ---------- alto contraste ----------
+   texto bem escuro, bordas firmes e fundo creme suave em vez de branco puro */
+
+body.tema-contraste {
+  --azul: #0b2f78;
+  --amarelo: #ffc72c;
+  --fundo: #f4efe3;
+  --texto-rodape: #111;
+  color: #111;
+  background: #ddd6c1;
+}
+
+body.tema-contraste .tela-app,
+body.tema-contraste .tela-auth {
+  background: #f4efe3;
+}
+
+body.tema-contraste .cartao,
+body.tema-contraste .bolha-log .texto,
+body.tema-contraste .bolha-usuario .texto,
+body.tema-contraste .chip,
+body.tema-contraste .chip-dia,
+body.tema-contraste .rodape {
+  background: #fffdf7;
+}
+
+body.tema-contraste .chip:has(input:checked),
+body.tema-contraste .chip-dia:has(input:checked) {
+  background: var(--amarelo);
+}
+
+body.tema-contraste .bolha-usuario .texto {
+  background: #cfe0f5;
+}
+
+body.tema-contraste .bolha-log .texto,
+body.tema-contraste .bolha-usuario .texto,
+body.tema-contraste .chip,
+body.tema-contraste .chip-dia {
+  border: 2px solid #111;
+}
+
+body.tema-contraste .opcao-resposta {
+  background: #fffdf7;
+  border: 2px solid #111;
+}
+
+body.tema-contraste .caixa-texto,
+body.tema-contraste .form-auth input {
+  background: #fffdf7;
+  border: 2px solid #111;
+}
+
+body.tema-contraste .botao-secundario {
+  background: #fffdf7;
+  border: 2px solid var(--azul);
+  color: var(--azul);
+  font-weight: 600;
+}
+
+body.tema-contraste .botao-perigo {
+  border-color: #8c1d15;
+  color: #8c1d15;
+}
+
+body.tema-contraste .botao-primario {
+  background: var(--azul);
+  color: #fff;
+}
+
+body.tema-contraste .rodape {
+  border-top: 2px solid #111;
+}
+
+body.tema-contraste .rodape-item {
+  color: #2b2b2b;
+}
+
+body.tema-contraste .rodape-ativo {
+  color: #7a3f00;
+}
+
+body.tema-contraste .rodape-icone-ativo {
+  background: #ffe9a8;
+}
+
+body.tema-contraste .barra-progresso {
+  height: 14px;
+  background: #cfc8b4;
+  border: 1px solid #111;
+}
+
+body.tema-contraste .avisos {
+  background: #fff0ee;
+  color: #8c1d15;
+  border: 2px solid #8c1d15;
+}
+
+body.tema-contraste .avisos-sucesso {
+  background: #e8f6e8;
+  color: #0f5a1c;
+  border-color: #0f5a1c;
+}
+
+body.tema-contraste .feedback-acertou {
+  background: #e5f4e5;
+  border-color: #0f5a1c;
+}
+
+body.tema-contraste .feedback-errou {
+  background: #fff0cc;
+  border-color: #8a5a00;
+}
+
+body.tema-contraste .selo-card {
+  background: #fffdf7;
+  border: 2px solid #111;
+}
+
+body.tema-contraste .selo-card-icone {
+  border: 2px solid currentColor;
+}
+
+body.tema-contraste .selo-card-numero,
+body.tema-contraste .selo-card-rotulo,
+body.tema-contraste .selo-card-detalhe {
+  color: #111;
+}
+
+body.tema-contraste .ia-info,
+body.tema-contraste .ia-rodape-chat {
+  background: #fffdf7;
+  border-color: #111;
+}
+
+body.tema-contraste .ia-data,
+body.tema-contraste .ia-status {
+  color: #111;
+}
+
+body.tema-contraste .texto-markdown code {
+  background: #e9e2cf;
+}
+
+body.tema-contraste .texto-markdown th,
+body.tema-contraste .texto-markdown td {
+  border-color: #111;
+}
+
+body.tema-contraste .texto-markdown th,
+body.tema-contraste .texto-markdown pre {
+  background: #e9e2cf;
+}
+
+body.tema-contraste .texto-markdown blockquote {
+  border-left-color: #111;
+  color: #111;
+}
+
+body.tema-contraste .digitando i {
+  background: #111;
+}
+
+body.tema-contraste .dica {
+  background: #fffdf7;
+  border-color: #8a5a00;
+}
+
+body.tema-contraste .dica-texto {
+  background: #fff3cf;
+}
+
+body.tema-contraste .icone-dica {
+  color: #8a5a00;
+}
+
+/* foco do teclado bem visivel */
+body.tema-contraste a:focus-visible,
+body.tema-contraste button:focus-visible,
+body.tema-contraste input:focus-visible,
+body.tema-contraste summary:focus-visible {
+  outline: 3px solid #111;
+  outline-offset: 2px;
+}
+
+/* ---------- menos animacao ----------
+   respeita quem pediu isso no sistema operacional */
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* aviso do spam na tela do codigo com alto contraste */
+body.tema-contraste .dica-spam {
+  background: #fffdf7;
+  color: #111;
+  border: 2px solid #111;
+}
+
+/* alto contraste recompensa conquistada pop up de conquista e podio do ranking */
+
+body.tema-contraste .cartao-conquistada {
+  background: #e5f4e5;
+  border-color: #0f5a1c;
+}
+
+body.tema-contraste .conquista-caixa {
+  background: #0f5a1c;
+  border-color: #111;
+}
+
+body.tema-contraste .conquista-item {
+  border: 2px solid #111;
+}
+
+body.tema-contraste .cartao-ouro,
+body.tema-contraste .cartao-prata,
+body.tema-contraste .cartao-bronze {
+  border: 3px solid #111;
+}
+
+body.tema-contraste .cartao-ouro { background: #f7c948; }
+body.tema-contraste .cartao-prata { background: #d5dae0; }
+body.tema-contraste .cartao-bronze { background: #cd7f32; }
+
+/* texto do pop up de conquista acompanha o tamanho da fonte escolhido */
+body:not(.fonte-normal) .conquista-descricao {
+  font-size: calc(14px * var(--escala-fonte));
+}
+
+body:not(.fonte-normal) .conquista-botao {
+  font-size: calc(15px * var(--escala-fonte));
+}
+
+body:not(.fonte-normal) .conquista-nome {
+  font-size: calc(17px * var(--escala-fonte));
+}

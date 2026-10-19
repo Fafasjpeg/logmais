@@ -5,43 +5,325 @@
 {% endblock %}
 {% block content %}
 <div class="tela-app">
-  <header class="topo-azul"><h1>Assistente Log+</h1></header>
-  <main class="conteudo-app">
-    {% with mensagens = get_flashed_messages() %}
-      {% if mensagens %}<ul class="avisos">{% for m in mensagens %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
-    {% endwith %}
+  <header class="topo-azul">
+    <h1>Assistente Log+</h1>
+    <button type="button" class="topo-info" id="botao-info" aria-label="Como o Log funciona" aria-expanded="false" aria-controls="painel-info">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-5"/><circle cx="12" cy="7.8" r="0.6" fill="currentColor"/></svg>
+    </button>
+  </header>
 
-    {% if not historico %}
-      <div class="bolha-log"><span class="avatar-log">☁️</span><p class="texto">Oi! Pode me perguntar qualquer coisa sobre matemática 🧮</p></div>
+  {# explicacao do log escondida por padrao abre no icone de informacao do topo #}
+  <section class="ia-info" id="painel-info" hidden>
+    <p class="cartao-titulo">Como o Log funciona</p>
+    <p class="cartao-corpo">O Log é o assistente de matemática do app. Escreva uma dúvida de matemática e ele explica de um jeito bem didático, em partes separadas. Perguntas sobre outros assuntos não são respondidas.</p>
+    <p class="cartao-corpo">Limites: até {{ limite_caracteres }} caracteres por pergunta, {{ maximo_por_minuto }} perguntas por minuto e {{ status.gratis_por_dia }} perguntas grátis por dia. Depois de {{ quantas_fora_do_tema }} perguntas seguidas fora do tema, o chat fecha por {{ minutos_de_castigo }} minutos.</p>
+    <p class="cartao-corpo">Acabaram as perguntas do dia? Você pode comprar mais com os pontos da carteira:{% for quantidade, custo in pacotes.items() %} {{ quantidade }} perguntas por {{ custo }} pontos{{ ' e' if not loop.last else '.' }}{% endfor %}</p>
+  </section>
+
+  {% with mensagens = get_flashed_messages(with_categories=true) %}
+    {% if mensagens %}
+      <ul class="avisos ia-aviso {{ 'avisos-sucesso' if mensagens[0][0] == 'sucesso' }}">{% for categoria, m in mensagens %}<li>{{ m }}</li>{% endfor %}</ul>
     {% endif %}
+  {% endwith %}
+  {% if not ia_configurada %}
+    <ul class="avisos ia-aviso"><li>O Log ainda não está configurado. O administrador precisa colocar a chave da OpenAI no arquivo .env.</li></ul>
+  {% endif %}
+  {# avisos que o javascript preenche sem recarregar a tela #}
+  <ul class="avisos ia-aviso" id="ia-aviso" hidden></ul>
 
-    {% for msg in historico %}
-      <div class="bolha-usuario"><p class="texto">{{ msg.pergunta_usuario }}</p></div>
-      <div class="bolha-log"><span class="avatar-log">☁️</span><p class="texto">{{ msg.resposta_ia }}</p></div>
-    {% endfor %}
-
-    <form method="post" style="margin-top: 20px;">
-      <textarea name="pergunta" maxlength="{{ limite_caracteres }}" rows="3" placeholder="Digite sua pergunta de matemática..." class="caixa-texto"></textarea>
-      <button type="submit" class="botao-primario" style="width:100%; margin-top:10px;">Enviar</button>
-    </form>
+  <main class="conteudo-app ia-mensagens" id="ia-mensagens">
+    <button type="button" class="botao-secundario ia-mais-antigas" id="ia-mais-antigas" hidden></button>
+    <div id="ia-lista"></div>
+    <div class="bolha-log" id="ia-boas-vindas" hidden><span class="avatar-log">Log</span><p class="texto">Oi! Pode me perguntar qualquer coisa sobre matemática. Por exemplo: como somar frações com denominadores diferentes?</p></div>
   </main>
+
+  <section class="ia-rodape-chat">
+    <p class="ia-status" id="ia-status" aria-live="polite">Hoje: {{ status.gratis_restantes }} de {{ status.gratis_por_dia }} perguntas grátis{% if status.extras %} · {{ status.extras }} {{ 'pergunta extra' if status.extras == 1 else 'perguntas extras' }}{% endif %}</p>
+
+    <details class="ia-compra" id="ia-compra" {{ 'open' if status.sem_perguntas }}>
+      <summary>Comprar mais perguntas</summary>
+      <p class="cartao-corpo">Sua carteira: <strong id="ia-carteira">{{ status.carteira }}</strong> pontos</p>
+      {% for quantidade, custo in pacotes.items() %}
+        <form method="post" action="{{ url_for('ia_comprar') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="pacote" value="{{ quantidade }}">
+          <button type="submit" class="botao-secundario ia-compra-botao" data-custo="{{ custo }}" {{ 'disabled' if status.carteira < custo }}>{{ quantidade }} perguntas por {{ custo }} pontos</button>
+        </form>
+      {% endfor %}
+    </details>
+
+    <form id="ia-form" class="ia-form">
+      <label for="pergunta" class="so-leitor-de-tela">Sua pergunta de matemática (até {{ limite_caracteres }} caracteres)</label>
+      <textarea id="pergunta" name="pergunta" maxlength="{{ limite_caracteres }}" rows="2" placeholder="Escreva sua dúvida de matemática" class="caixa-texto"></textarea>
+      <button type="submit" class="botao-primario" id="ia-enviar">Enviar</button>
+    </form>
+  </section>
+
   <nav class="rodape">
     <a class="rodape-item" href="{{ url_for('agenda') }}">
-      <span class="rodape-icone">📅</span>
+      <span class="rodape-icone"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_agenda.png') }}" alt=""></span>
       <span class="rodape-label">Agenda</span>
     </a>
     <a class="rodape-item rodape-ativo" href="{{ url_for('ia_chat') }}">
-      <span class="rodape-icone rodape-icone-ativo">☁️</span>
+      <span class="rodape-icone rodape-icone-ativo"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_log.png') }}" alt=""></span>
       <span class="rodape-label">Log (IA)</span>
     </a>
     <a class="rodape-item" href="{{ url_for('recompensas') }}">
-      <span class="rodape-icone">🏅</span>
+      <span class="rodape-icone"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_recompensas.png') }}" alt=""></span>
       <span class="rodape-label">Recompensas</span>
     </a>
     <a class="rodape-item" href="{{ url_for('trilha') }}">
-      <span class="rodape-icone">⭐</span>
+      <span class="rodape-icone"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_trilha.png') }}" alt=""></span>
       <span class="rodape-label">Trilha</span>
     </a>
   </nav>
 </div>
+
+<script>
+  // enderecos e dados que o servidor entrega pra tela
+  var enderecoDoHistorico = "{{ url_for('ia_historico') }}";
+  var enderecoDeEnviarPergunta = "{{ url_for('ia_perguntar') }}";
+  var conversasPorPagina = {{ conversas_por_pagina }};
+  var chatConfigurado = {{ 'true' if ia_configurada else 'false' }};
+  var statusAtual = {{ status|tojson }};
+
+  // pedacos da tela
+  var areaDasMensagens = document.getElementById("ia-mensagens");
+  var listaDeConversas = document.getElementById("ia-lista");
+  var botaoMaisAntigas = document.getElementById("ia-mais-antigas");
+  var mensagemDeBoasVindas = document.getElementById("ia-boas-vindas");
+  var formularioDaPergunta = document.getElementById("ia-form");
+  var campoDaPergunta = document.getElementById("pergunta");
+  var botaoEnviar = document.getElementById("ia-enviar");
+  var textoDoStatus = document.getElementById("ia-status");
+  var detalhesDaCompra = document.getElementById("ia-compra");
+  var textoDaCarteira = document.getElementById("ia-carteira");
+  var botoesDeCompra = document.querySelectorAll(".ia-compra-botao");
+  var avisoDoChat = document.getElementById("ia-aviso");
+  var botaoDeInformacao = document.getElementById("botao-info");
+  var painelDeInformacao = document.getElementById("painel-info");
+
+  var menorIdNaTela = 0;
+  var enviandoPergunta = false;
+
+  function rolarParaOFim() {
+    areaDasMensagens.scrollTop = areaDasMensagens.scrollHeight;
+  }
+
+  // a fonte e as imagens carregam depois e aumentam a altura do texto
+  // por isso nos primeiros segundos a tela volta pro final de novo
+  // se o aluno ja mexeu na rolagem ela fica onde ele deixou
+  var aindaAbrindoATela = true;
+  function manterNoFimAoAbrir() {
+    if (aindaAbrindoATela) {
+      rolarParaOFim();
+    }
+  }
+  setTimeout(function () { aindaAbrindoATela = false; }, 2500);
+  areaDasMensagens.addEventListener("wheel", function () { aindaAbrindoATela = false; });
+  areaDasMensagens.addEventListener("touchstart", function () { aindaAbrindoATela = false; });
+  window.addEventListener("load", manterNoFimAoAbrir);
+  if (document.fonts) {
+    document.fonts.ready.then(manterNoFimAoAbrir);
+  }
+
+  function mostrarAviso(texto) {
+    avisoDoChat.innerHTML = "";
+    var item = document.createElement("li");
+    item.textContent = texto;
+    avisoDoChat.appendChild(item);
+    avisoDoChat.hidden = false;
+  }
+
+  function esconderAviso() {
+    avisoDoChat.hidden = true;
+  }
+
+  function dois(numero) {
+    return (numero < 10 ? "0" : "") + numero;
+  }
+
+  function formatarData(data) {
+    return dois(data.getDate()) + "/" + dois(data.getMonth() + 1) + "/" + data.getFullYear() + " às " + dois(data.getHours()) + ":" + dois(data.getMinutes());
+  }
+
+  // icone de informacao no topo mostra e esconde a explicacao do log
+  botaoDeInformacao.addEventListener("click", function () {
+    var vaiAbrir = painelDeInformacao.hidden;
+    painelDeInformacao.hidden = !vaiAbrir;
+    botaoDeInformacao.setAttribute("aria-expanded", vaiAbrir ? "true" : "false");
+  });
+
+  // trava o campo quando ainda esta enviando quando o chat nao esta configurado
+  // quando acabaram as perguntas ou quando o aluno esta de castigo
+  function atualizarTravaDoFormulario() {
+    var motivoDaTrava = "";
+    if (!chatConfigurado) {
+      motivoDaTrava = "O Log ainda não está configurado";
+    } else if (statusAtual.liberado_em) {
+      motivoDaTrava = "O chat abre de novo às " + statusAtual.liberado_em;
+    } else if (statusAtual.sem_perguntas) {
+      motivoDaTrava = "Compre mais perguntas para continuar";
+    }
+
+    var travado = enviandoPergunta || motivoDaTrava !== "";
+    campoDaPergunta.disabled = travado;
+    botaoEnviar.disabled = travado;
+    campoDaPergunta.placeholder = motivoDaTrava !== "" ? motivoDaTrava : "Escreva sua dúvida de matemática";
+  }
+
+  // atualiza o contador de perguntas a carteira e os botoes de compra
+  function aplicarStatus(status) {
+    statusAtual = status;
+
+    var texto = "Hoje: " + status.gratis_restantes + " de " + status.gratis_por_dia + " perguntas grátis";
+    if (status.extras > 0) {
+      texto += " · " + status.extras + (status.extras === 1 ? " pergunta extra" : " perguntas extras");
+    }
+    textoDoStatus.textContent = texto;
+    textoDaCarteira.textContent = status.carteira;
+
+    Array.prototype.forEach.call(botoesDeCompra, function (botao) {
+      botao.disabled = status.carteira < Number(botao.dataset.custo);
+    });
+    if (status.sem_perguntas) {
+      detalhesDaCompra.open = true;
+    }
+    if (status.liberado_em) {
+      mostrarAviso("Você fez muitas perguntas fora do tema de matemática. O chat volta às " + status.liberado_em + ".");
+    }
+    atualizarTravaDoFormulario();
+  }
+
+  // botao de paginacao no topo da conversa de 10 em 10
+  function atualizarBotaoMaisAntigas(restantes) {
+    if (restantes > 0) {
+      var quantas = Math.min(conversasPorPagina, restantes);
+      botaoMaisAntigas.textContent = "Ver as " + quantas + " conversas mais antigas (restam " + restantes + ")";
+      botaoMaisAntigas.hidden = false;
+    } else {
+      botaoMaisAntigas.hidden = true;
+    }
+  }
+
+  function carregarHistorico(antesDoId, aoTerminar) {
+    var endereco = enderecoDoHistorico + (antesDoId ? "?antes=" + antesDoId : "");
+    fetch(endereco)
+      .then(function (resposta) { return resposta.json(); })
+      .then(function (dados) {
+        if (!dados.ok) {
+          mostrarAviso(dados.erro);
+          botaoMaisAntigas.disabled = false;
+          return;
+        }
+        aoTerminar(dados);
+      })
+      .catch(function () {
+        mostrarAviso("Não consegui carregar as conversas. Confira a internet e tente de novo.");
+        botaoMaisAntigas.disabled = false;
+      });
+  }
+
+  // ao abrir a tela carrega as 10 conversas mais novas e vai direto pro final
+  carregarHistorico(0, function (dados) {
+    listaDeConversas.innerHTML = dados.html;
+    menorIdNaTela = dados.menor_id;
+    mensagemDeBoasVindas.hidden = dados.quantidade > 0;
+    atualizarBotaoMaisAntigas(dados.restantes);
+    rolarParaOFim();
+    // o teste de fonte pode ter terminado antes das conversas chegarem
+    manterNoFimAoAbrir();
+  });
+
+  // ao clicar carrega as 10 anteriores e mantem o aluno no mesmo ponto da leitura
+  botaoMaisAntigas.addEventListener("click", function () {
+    botaoMaisAntigas.disabled = true;
+    carregarHistorico(menorIdNaTela, function (dados) {
+      var alturaAntes = areaDasMensagens.scrollHeight;
+      var posicaoAntes = areaDasMensagens.scrollTop;
+      listaDeConversas.insertAdjacentHTML("afterbegin", dados.html);
+      areaDasMensagens.scrollTop = posicaoAntes + (areaDasMensagens.scrollHeight - alturaAntes);
+      menorIdNaTela = dados.menor_id;
+      atualizarBotaoMaisAntigas(dados.restantes);
+      botaoMaisAntigas.disabled = false;
+    });
+  });
+
+  // enter envia e shift mais enter pula linha
+  campoDaPergunta.addEventListener("keydown", function (evento) {
+    if (evento.key === "Enter" && !evento.shiftKey) {
+      evento.preventDefault();
+      formularioDaPergunta.requestSubmit();
+    }
+  });
+
+  // envio sem recarregar a tela
+  formularioDaPergunta.addEventListener("submit", function (evento) {
+    evento.preventDefault();
+    var textoDaPergunta = campoDaPergunta.value.trim();
+    if (textoDaPergunta === "" || enviandoPergunta) {
+      return;
+    }
+
+    esconderAviso();
+    enviandoPergunta = true;
+    campoDaPergunta.value = "";
+    atualizarTravaDoFormulario();
+    mensagemDeBoasVindas.hidden = true;
+
+    // a pergunta aparece na hora e o balao do log mostra tres pontinhos ate a resposta chegar
+    var conversaPendente = document.createElement("div");
+    conversaPendente.className = "ia-conversa";
+    conversaPendente.innerHTML =
+      '<p class="ia-data"></p>' +
+      '<div class="bolha-usuario"><p class="texto"></p></div>' +
+      '<div class="bolha-log"><span class="avatar-log">Log</span>' +
+      '<div class="texto texto-markdown"><span class="digitando" role="status" aria-label="O Log está escrevendo"><i></i><i></i><i></i></span></div></div>';
+    conversaPendente.querySelector(".ia-data").textContent = formatarData(new Date());
+    conversaPendente.querySelector(".bolha-usuario .texto").textContent = textoDaPergunta;
+    listaDeConversas.appendChild(conversaPendente);
+    rolarParaOFim();
+
+    function desfazerEnvio(textoDoAviso) {
+      // a pergunta nao foi gravada entao sai da tela e volta pro campo pro aluno nao perder o texto
+      conversaPendente.remove();
+      campoDaPergunta.value = textoDaPergunta;
+      mostrarAviso(textoDoAviso);
+      if (listaDeConversas.children.length === 0) {
+        mensagemDeBoasVindas.hidden = false;
+      }
+    }
+
+    fetch(enderecoDeEnviarPergunta, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": "{{ csrf_token() }}" },
+      body: JSON.stringify({ pergunta: textoDaPergunta })
+    })
+      .then(function (resposta) { return resposta.json(); })
+      .then(function (dados) {
+        enviandoPergunta = false;
+        if (dados.ok) {
+          conversaPendente.outerHTML = dados.html;
+          aplicarStatus(dados.status);
+          rolarParaOFim();
+        } else {
+          if (dados.status) {
+            aplicarStatus(dados.status);
+          }
+          desfazerEnvio(dados.erro);
+        }
+        atualizarTravaDoFormulario();
+        if (!campoDaPergunta.disabled) {
+          campoDaPergunta.focus();
+        }
+      })
+      .catch(function () {
+        enviandoPergunta = false;
+        desfazerEnvio("Não consegui falar com o Log. Confira a internet e tente de novo.");
+        atualizarTravaDoFormulario();
+      });
+  });
+
+  aplicarStatus(statusAtual);
+</script>
 {% endblock %}

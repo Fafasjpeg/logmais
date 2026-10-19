@@ -14,11 +14,18 @@
       <a href="{{ url_for('admin_recompensas') }}">Recompensas</a>
       <a href="{{ url_for('admin_rotinas') }}">Rotinas</a>
       <a href="{{ url_for('admin_relatorios') }}">Relatórios</a>
+      <a href="{{ url_for('admin_feedbacks') }}">Feedbacks</a>
       <a href="{{ url_for('logout') }}">Sair</a>
     </nav>
   </div>
 
   <h2 class="admin-titulo-pagina">Desafios — {{ fase.nome_fase }}</h2>
+
+  {% with mensagens = get_flashed_messages() %}
+    {% if mensagens %}<ul class="avisos">{% for m in mensagens %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
+  {% endwith %}
+
+  <p class="admin-ajuda">Um desafio só aparece para os alunos quando está ativo e tem pelo menos uma pergunta ativa. Desafios novos começam inativos: cadastre as perguntas e depois ative.</p>
 
   <div class="admin-acoes" style="margin-bottom:16px;">
     <a class="admin-botao admin-botao-primario" href="{{ url_for('admin_desafio_form', id_fase=fase.id_fase) }}">+ Novo desafio</a>
@@ -28,18 +35,21 @@
   <table class="admin-tabela">
     <tr>
       <th>Ordem</th>
-      <th>Estrelas</th>
+      <th>Dificuldade (1 a 5)</th>
       <th>Pontos</th>
       <th>Tempo limite</th>
+      <th>Perguntas ativas</th>
       <th>Status</th>
       <th>Ações</th>
     </tr>
     {% for desafio in desafios %}
       <tr>
         <td>{{ desafio.ordem }}</td>
-        <td>{{ '⭐' * desafio.estrelas }}</td>
+        <td>{{ desafio.estrelas }} de 5</td>
         <td>{{ desafio.pontos }}</td>
         <td>{{ desafio.tempo_limite_seg }}s</td>
+        {% set perguntas_ativas = desafio.perguntas|selectattr('ativo')|list|length %}
+        <td>{{ perguntas_ativas }}{% if perguntas_ativas == 0 %} <span class="selo-status selo-inativo">sem perguntas</span>{% endif %}</td>
         <td><span class="selo-status {{ 'selo-ativo' if desafio.ativo else 'selo-inativo' }}">{{ 'ativo' if desafio.ativo else 'inativo' }}</span></td>
         <td class="admin-acoes">
           <a class="admin-botao admin-botao-secundario" href="{{ url_for('admin_perguntas', id_desafio=desafio.id_desafio) }}">Perguntas</a>
@@ -48,6 +58,7 @@
             <a class="admin-botao admin-botao-perigo" href="{{ url_for('admin_confirmar_status_desafio', id_desafio=desafio.id_desafio) }}">Desativar</a>
           {% else %}
             <form method="post" action="{{ url_for('admin_alternar_status_desafio', id_desafio=desafio.id_desafio) }}" style="display:inline;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit" class="admin-botao admin-botao-primario">Ativar</button>
             </form>
           {% endif %}

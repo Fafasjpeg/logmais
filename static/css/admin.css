@@ -1,6 +1,6 @@
-/* Estilos da área de admin — telas de gestão, sem referência no
-   Figma, então usa um layout mais utilitário (tabelas, formulários)
-   em vez do "frame de celular" das telas de aluno. */
+/* estilos da area de admin telas de gestao sem referencia no
+   figma entao usa um layout mais utilitario tabelas formularios
+   em vez do frame de celular das telas de aluno */
 
 body {
   justify-content: flex-start;
@@ -222,4 +222,19 @@ table.admin-tabela tr:last-child td {
 
 .form-pergunta:has(input[name="tipo"][value="alternativa"]:checked) .secao-digitada {
   display: none;
+}
+
+/* texto de ajuda embaixo do titulo */
+.admin-ajuda {
+  max-width: 640px;
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: #555;
+}
+
+/* o painel tambem funciona em tela pequena
+   a tabela ganha rolagem lateral em vez de estourar a pagina */
+@media (max-width: 800px) {
+  .admin-shell { padding: 16px 12px 40px; }
+  table.admin-tabela { display: block; overflow-x: auto; }
 }

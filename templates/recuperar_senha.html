@@ -6,17 +6,18 @@
   <main class="auth-conteudo">
     <p class="logo"><span class="logo-log">LOG</span><span class="logo-mais">+</span></p>
 
-    {% with mensagens = get_flashed_messages() %}
+    {% with mensagens = get_flashed_messages(with_categories=true) %}
       {% if mensagens %}
-        <ul class="avisos">{% for m in mensagens %}<li>{{ m }}</li>{% endfor %}</ul>
+        <ul class="avisos {{ 'avisos-sucesso' if mensagens[0][0] == 'sucesso' }}">{% for categoria, m in mensagens %}<li>{{ m }}</li>{% endfor %}</ul>
       {% endif %}
     {% endwith %}
 
+    <p class="texto-auth">Digite o e-mail da sua conta. Vamos enviar um código de 6 números para você criar uma nova senha.</p>
+
     <form method="post" class="form-auth">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="email" name="email" placeholder="E-mail cadastrado (ex: nome@gmail.com)" required>
-      <input type="password" name="nova_senha" placeholder="Nova senha" minlength="6" required>
-      <input type="password" name="confirmar_senha" placeholder="Confirmar nova senha" minlength="6" required>
-      <button type="submit" class="botao-primario">Redefinir senha</button>
+      <button type="submit" class="botao-primario">Enviar código</button>
     </form>
 
     <p class="links-auth"><a href="{{ url_for('login') }}">Voltar pro login</a></p>

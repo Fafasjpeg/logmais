@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Configurações — LOG+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+{% endblock %}
+{% block content %}
+<div class="tela-app">
+  <header class="topo-azul">
+    <a class="topo-voltar" href="{{ url_for('perfil') }}">←</a>
+    <h1>Configurações</h1>
+  </header>
+  <main class="conteudo-app">
+    {% with mensagens = get_flashed_messages(with_categories=true) %}
+      {% if mensagens %}
+        <ul class="avisos {{ 'avisos-sucesso' if mensagens[0][0] == 'sucesso' }}">{% for categoria, m in mensagens %}<li>{{ m }}</li>{% endfor %}</ul>
+      {% endif %}
+    {% endwith %}
+
+    <form method="post" id="form-config">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="cartao">
+        <p class="cartao-titulo">Modo sem pressão</p>
+        <p class="cartao-corpo">Esconde o cronômetro e os tempos. Você responde com calma e ninguém te apressa.</p>
+        <label class="opcao-resposta">
+          <input type="checkbox" name="modo_sem_pressao" {{ 'checked' if usuario.modo_sem_pressao }}>
+          Ativar o modo sem pressão
+        </label>
+      </div>
+
+      <div class="cartao" role="radiogroup" aria-labelledby="titulo-tema">
+        <p class="cartao-titulo" id="titulo-tema">Cores</p>
+        {% for valor, rotulo in temas %}
+          <label class="opcao-resposta">
+            <input type="radio" name="tema" value="{{ valor }}" {{ 'checked' if usuario.tema == valor }}>
+            {{ rotulo }}
+          </label>
+        {% endfor %}
+      </div>
+
+      <div class="cartao" role="radiogroup" aria-labelledby="titulo-fonte">
+        <p class="cartao-titulo" id="titulo-fonte">Tamanho da letra</p>
+        {% for valor, rotulo in tamanhos_fonte %}
+          <label class="opcao-resposta">
+            <input type="radio" name="tamanho_fonte" value="{{ valor }}" {{ 'checked' if usuario.tamanho_fonte == valor }}>
+            {{ rotulo }}
+          </label>
+        {% endfor %}
+      </div>
+
+      <div class="cartao">
+        <p class="cartao-titulo">Exemplo</p>
+        <p class="cartao-corpo">Quanto é 12 + 8? As mudanças aparecem aqui na hora, mas só valem nas outras telas depois de salvar.</p>
+      </div>
+
+      <button type="submit" class="botao-primario" style="width:100%; margin-bottom:12px;">Salvar</button>
+    </form>
+
+    <a class="botao-secundario" href="{{ url_for('perfil') }}">Voltar para o perfil</a>
+
+    <script>
+      // mostra o tema e a letra escolhidos antes de salvar
+      var formulario = document.getElementById("form-config");
+      formulario.addEventListener("change", function () {
+        var tema = formulario.querySelector('input[name="tema"]:checked').value;
+        var fonte = formulario.querySelector('input[name="tamanho_fonte"]:checked').value;
+        document.body.className = "tema-" + tema + " fonte-" + fonte;
+      });
+    </script>
+  </main>
+
+  <nav class="rodape">
+    <a class="rodape-item" href="{{ url_for('agenda') }}">
+      <span class="rodape-icone"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_agenda.png') }}" alt=""></span>
+      <span class="rodape-label">Agenda</span>
+    </a>
+    <a class="rodape-item" href="{{ url_for('ia_chat') }}">
+      <span class="rodape-icone"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_log.png') }}" alt=""></span>
+      <span class="rodape-label">Log (IA)</span>
+    </a>
+    <a class="rodape-item" href="{{ url_for('recompensas') }}">
+      <span class="rodape-icone"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_recompensas.png') }}" alt=""></span>
+      <span class="rodape-label">Recompensas</span>
+    </a>
+    <a class="rodape-item" href="{{ url_for('trilha') }}">
+      <span class="rodape-icone"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_trilha.png') }}" alt=""></span>
+      <span class="rodape-label">Trilha</span>
+    </a>
+  </nav>
+</div>
+{% endblock %}

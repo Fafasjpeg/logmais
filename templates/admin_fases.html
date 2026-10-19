@@ -14,6 +14,7 @@
       <a href="{{ url_for('admin_recompensas') }}">Recompensas</a>
       <a href="{{ url_for('admin_rotinas') }}">Rotinas</a>
       <a href="{{ url_for('admin_relatorios') }}">Relatórios</a>
+      <a href="{{ url_for('admin_feedbacks') }}">Feedbacks</a>
       <a href="{{ url_for('logout') }}">Sair</a>
     </nav>
   </div>
@@ -38,11 +39,13 @@
         <td><span class="selo-status {{ 'selo-ativo' if fase.ativo else 'selo-inativo' }}">{{ 'ativa' if fase.ativo else 'inativa' }}</span></td>
         <td class="admin-acoes">
           <a class="admin-botao admin-botao-secundario" href="{{ url_for('admin_desafios', id_fase=fase.id_fase) }}">Desafios</a>
+          <a class="admin-botao admin-botao-secundario" href="{{ url_for('admin_tutorial_telas', id_fase=fase.id_fase) }}">Tutorial</a>
           <a class="admin-botao admin-botao-secundario" href="{{ url_for('admin_fase_form', id_fase=fase.id_fase) }}">Editar</a>
           {% if fase.ativo %}
             <a class="admin-botao admin-botao-perigo" href="{{ url_for('admin_confirmar_status_fase', id_fase=fase.id_fase) }}">Desativar</a>
           {% else %}
             <form method="post" action="{{ url_for('admin_alternar_status_fase', id_fase=fase.id_fase) }}" style="display:inline;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit" class="admin-botao admin-botao-primario">Ativar</button>
             </form>
           {% endif %}

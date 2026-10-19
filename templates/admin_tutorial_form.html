@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar tela do tutorial' if tela else 'Nova tela do tutorial' }} — Admin LOG+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% endblock %}
+{% block content %}
+<div class="admin-shell">
+  <div class="admin-topo">
+    <h1>LOG+ Admin</h1>
+    <nav class="admin-nav">
+      <a href="{{ url_for('admin_dashboard') }}">Dashboard</a>
+      <a href="{{ url_for('admin_usuarios') }}">Usuários</a>
+      <a href="{{ url_for('admin_fases') }}">Fases</a>
+      <a href="{{ url_for('admin_recompensas') }}">Recompensas</a>
+      <a href="{{ url_for('admin_rotinas') }}">Rotinas</a>
+      <a href="{{ url_for('admin_relatorios') }}">Relatórios</a>
+      <a href="{{ url_for('admin_feedbacks') }}">Feedbacks</a>
+      <a href="{{ url_for('logout') }}">Sair</a>
+    </nav>
+  </div>
+
+  <h2 class="admin-titulo-pagina">{{ 'Editar tela do tutorial' if tela else 'Nova tela do tutorial' }} — {{ fase.nome_fase }}</h2>
+
+  {% with mensagens = get_flashed_messages() %}
+    {% if mensagens %}<ul class="avisos">{% for m in mensagens %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
+  {% endwith %}
+
+  {# enctype multipart e obrigatorio pra o navegador enviar o arquivo da foto #}
+  <form method="post" enctype="multipart/form-data" class="admin-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Ordem da tela (1 aparece primeiro, depois 2, 3...)
+      <input type="number" name="ordem" min="1" value="{{ tela.ordem if tela else '' }}" required>
+    </label>
+    <label>Título (opcional, aparece embaixo da foto)
+      <input type="text" name="titulo" maxlength="100" value="{{ tela.titulo if tela and tela.titulo else '' }}">
+    </label>
+    <label>Texto de apoio (opcional, explica o passo da conta)
+      <textarea name="texto" rows="4">{{ tela.texto if tela and tela.texto else '' }}</textarea>
+    </label>
+
+    {% if tela %}
+      <p>Foto atual desta tela:</p>
+      <img src="{{ url_for('static', filename=tela.caminho_imagem) }}" alt="Foto atual da tela {{ tela.ordem }}" style="max-width:260px; border-radius:10px;">
+    {% endif %}
+    <label>{{ 'Trocar a foto (deixe vazio para manter a atual)' if tela else 'Foto da resolução' }} — png, jpg, jpeg, webp ou gif, até 5 MB
+      <input type="file" name="imagem" accept=".png,.jpg,.jpeg,.webp,.gif,image/png,image/jpeg,image/webp,image/gif" {{ '' if tela else 'required' }}>
+    </label>
+
+    <div class="admin-acoes">
+      <button type="submit" class="admin-botao admin-botao-primario">Salvar</button>
+      <a class="admin-botao admin-botao-secundario" href="{{ url_for('admin_tutorial_telas', id_fase=fase.id_fase) }}">Voltar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

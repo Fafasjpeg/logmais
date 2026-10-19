@@ -9,8 +9,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;600;700&family=Lexend:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 {% block extra_css %}{% endblock %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/acessibilidade.css') }}">
 </head>
-<body>
+<body class="tema-{{ session.get('tema', 'padrao') }} fonte-{{ session.get('tamanho_fonte', 'normal') }}">
 {% block content %}{% endblock %}
 </body>
 </html>

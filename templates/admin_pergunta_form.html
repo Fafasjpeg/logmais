@@ -14,6 +14,7 @@
       <a href="{{ url_for('admin_recompensas') }}">Recompensas</a>
       <a href="{{ url_for('admin_rotinas') }}">Rotinas</a>
       <a href="{{ url_for('admin_relatorios') }}">Relatórios</a>
+      <a href="{{ url_for('admin_feedbacks') }}">Feedbacks</a>
       <a href="{{ url_for('logout') }}">Sair</a>
     </nav>
   </div>
@@ -25,6 +26,7 @@
   {% endwith %}
 
   <form method="post" class="admin-form form-pergunta">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Ordem dentro do desafio
       <input type="number" name="ordem" min="1" value="{{ pergunta.ordem if pergunta else '' }}" required>
     </label>

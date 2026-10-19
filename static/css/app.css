@@ -1,15 +1,17 @@
-/* Estilos compartilhados por todas as telas depois do login
-   (Agenda, Assistente/Rotina, Perfil, Recompensas, Log IA, Jogo). */
+/* estilos compartilhados por todas as telas depois do login
+   agenda assistente/rotina perfil recompensas log ia jogo */
 
 .tela-app {
-  width: 390px;
+  width: 100%;
+  max-width: 390px;
   height: 100vh;
+  height: 100dvh;
   background: #f2f3fa;
   display: flex;
   flex-direction: column;
 }
 
-/* ---- Cabeçalho azul ---- */
+/* cabecalho azul */
 
 .topo-azul {
   flex-shrink: 0;
@@ -56,7 +58,7 @@
   font-size: 20px;
 }
 
-/* ---- Conteúdo rolável ---- */
+/* conteudo rolavel */
 
 .conteudo-app {
   flex: 1;
@@ -64,7 +66,7 @@
   padding: 20px;
 }
 
-/* ---- Cards genéricos ---- */
+/* cards genericos */
 
 .cartao {
   background: #fff;
@@ -111,7 +113,7 @@
   margin: 0 auto 10px;
 }
 
-/* ---- Botões secundários (fora do form principal) ---- */
+/* botoes secundarios fora do form principal */
 
 .botao-secundario {
   display: block;
@@ -130,7 +132,7 @@
   color: #b3261e;
 }
 
-/* ---- Chips (assistente de rotina) ---- */
+/* chips assistente de rotina */
 
 .chip-grupo {
   display: flex;
@@ -175,7 +177,7 @@
   background: var(--amarelo);
 }
 
-/* ---- Bolhas de chat (assistente / Log IA) ---- */
+/* bolhas de chat assistente / log ia */
 
 .bolha-log {
   display: flex;
@@ -185,7 +187,17 @@
 }
 
 .bolha-log .avatar-log {
-  font-size: 22px;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--azul);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .bolha-log .texto {
@@ -221,7 +233,7 @@
   font-size: 13px;
 }
 
-/* ---- Barra de progresso (agenda) ---- */
+/* barra de progresso agenda */
 
 .barra-progresso {
   width: 100%;
@@ -237,7 +249,7 @@
   background: var(--azul);
 }
 
-/* ---- Perguntas do jogo ---- */
+/* perguntas do jogo */
 
 .opcao-resposta {
   display: block;
@@ -253,20 +265,12 @@
   margin-right: 8px;
 }
 
-/* ---- Animação de acerto/erro (tela de pergunta e de resultado) ---- */
+/* animacao de acerto/erro tela de pergunta e de resultado */
 
 @keyframes pulso-acerto {
   0% { transform: scale(0.85); opacity: 0; }
   60% { transform: scale(1.05); opacity: 1; }
   100% { transform: scale(1); }
-}
-
-@keyframes tremida-erro {
-  0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-8px); }
-  40% { transform: translateX(8px); }
-  60% { transform: translateX(-5px); }
-  80% { transform: translateX(5px); }
 }
 
 .feedback-acertou {
@@ -275,13 +279,207 @@
   animation: pulso-acerto 0.4s ease-out;
 }
 
+/* quando nao passou a cor e suave e sem tremida, errar faz parte de aprender */
 .feedback-errou {
-  background: #fdecec;
-  border-color: #e35b5b;
-  animation: tremida-erro 0.4s ease-in-out;
+  background: #fff6e0;
+  border-color: #f0b429;
 }
 
-/* ---- Rodapé de navegação ---- */
+/* dica da pergunta */
+
+.dica {
+  background: #fff;
+  border: 2px solid var(--amarelo);
+  border-radius: 16px;
+  margin-bottom: 16px;
+}
+
+.dica-botao {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--azul);
+}
+
+.dica-botao::-webkit-details-marker {
+  display: none;
+}
+
+.icone-dica {
+  color: #c98a00;
+}
+
+.dica-corpo {
+  padding: 0 14px 14px;
+}
+
+.dica-texto {
+  background: #fff8e1;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 14px;
+  margin: 0 0 10px;
+}
+
+.dica-corpo form {
+  margin: 0;
+}
+
+.dica-acao {
+  width: 100%;
+  background: #fff;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.dica-acao:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* selos do perfil pontos carteira sequencia e dias seguidos */
+
+.selos-perfil {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.selo-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 14px 10px;
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: 0px 4px 4px 0px rgba(0, 0, 0, 0.08);
+  animation: pulso-acerto 0.4s ease-out backwards;
+}
+
+.selo-card:nth-child(2) { animation-delay: 0.08s; }
+.selo-card:nth-child(3) { animation-delay: 0.16s; }
+.selo-card:nth-child(4) { animation-delay: 0.24s; }
+
+.selo-card-icone {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+
+.selo-card-numero {
+  font-family: 'Archivo Black', 'Inter', sans-serif;
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1.1;
+  color: #262633;
+}
+
+.selo-card-rotulo {
+  font-size: 13px;
+  font-weight: 700;
+  color: #262633;
+}
+
+.selo-card-detalhe {
+  font-size: 12px;
+  color: #4a4c5c;
+}
+
+.selo-card-pontos { background: #fff2bf; }
+.selo-card-pontos .selo-card-icone { color: #b07d00; }
+
+.selo-card-carteira { background: #d9edd9; }
+.selo-card-carteira .selo-card-icone { color: #2e6b38; }
+
+.selo-card-sequencia { background: #ffe5cc; }
+.selo-card-sequencia .selo-card-icone { color: #d2640a; }
+
+.selo-card-dias { background: #dcebff; }
+.selo-card-dias .selo-card-icone { color: var(--azul); }
+
+/* tela da pergunta o topo (pergunta x de x barra e tempo) fica fixo no alto
+   e o enunciado a dica e as respostas ficam centralizados no espaco que sobra
+   margin auto no lugar de justify-content center pra nao cortar quando o conteudo for maior que a tela */
+
+.conteudo-pergunta,
+.conteudo-resultado {
+  display: flex;
+  flex-direction: column;
+}
+
+.area-pergunta,
+.area-resultado {
+  margin: auto 0;
+}
+
+/* telas de resultado do desafio e de fase concluida mesmo esquema da pergunta */
+
+.area-resultado .cartao {
+  padding: 28px 18px;
+}
+
+.area-resultado .cartao-titulo {
+  font-size: 20px;
+  margin-bottom: 14px;
+}
+
+.area-resultado .cartao-corpo {
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.area-resultado .botao-primario {
+  font-size: 15px;
+  padding: 18px;
+}
+
+.area-pergunta .cartao {
+  padding: 26px 18px;
+}
+
+.pergunta-enunciado {
+  font-size: 18px;
+  line-height: 1.45;
+}
+
+.area-pergunta .opcao-resposta {
+  font-size: 15px;
+  padding: 14px 16px;
+}
+
+.area-pergunta .caixa-texto {
+  font-size: 16px;
+  padding: 14px;
+  text-align: center;
+}
+
+.area-pergunta .botao-primario {
+  font-size: 15px;
+  padding: 18px;
+}
+
+/* texto em cima da barra de progresso do desafio e da fase */
+
+.progresso-texto {
+  text-align: center;
+  font-size: 13px;
+  margin: 0 0 6px;
+}
+
+/* rodape de navegacao */
 
 .rodape {
   flex-shrink: 0;
@@ -319,7 +517,467 @@
   background: #fff2cc;
 }
 
+/* icone png da navegacao */
+.rodape-img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  display: block;
+}
+
 .rodape-ativo {
   color: #ff990d;
   font-weight: 700;
+}
+
+/* elementos com o atributo hidden somem mesmo quando a classe define display */
+
+[hidden] {
+  display: none !important;
+}
+
+/* texto so pra leitor de tela */
+
+.so-leitor-de-tela {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* tela do log ia
+   topo com icone de informacao mensagens rolaveis no meio e campo de pergunta fixo embaixo */
+
+.topo-info {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background: transparent;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.topo-info[aria-expanded="true"] {
+  background: #fff;
+  color: var(--azul);
+}
+
+.ia-info {
+  flex-shrink: 0;
+  max-height: 45vh;
+  overflow-y: auto;
+  background: #fff;
+  border-bottom: 1px solid #e5e5f2;
+  padding: 14px 20px 4px;
+}
+
+.ia-aviso {
+  flex-shrink: 0;
+  max-width: none;
+  margin: 8px 20px 0;
+  width: auto;
+}
+
+.ia-conversa {
+  margin-bottom: 24px;
+}
+
+.ia-data {
+  text-align: right;
+  font-size: 12px;
+  color: #5b5e70;
+  margin: 0 4px 6px;
+}
+
+.ia-mensagens .bolha-usuario .texto {
+  max-width: 85%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ia-mais-antigas {
+  width: 100%;
+  background: #fff;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.ia-rodape-chat {
+  flex-shrink: 0;
+  background: #fff;
+  border-top: 1px solid #e5e5f2;
+  padding: 8px 16px 12px;
+}
+
+.ia-status {
+  font-size: 12px;
+  color: #404252;
+  margin: 0 0 6px;
+  text-align: center;
+}
+
+.ia-compra {
+  margin-bottom: 8px;
+}
+
+.ia-compra summary {
+  cursor: pointer;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--azul);
+  padding: 4px 0;
+}
+
+.ia-compra form {
+  margin: 0;
+}
+
+.ia-compra-botao {
+  width: 100%;
+  background: #fff;
+  font-family: inherit;
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.ia-compra-botao:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ia-form {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.ia-form .caixa-texto {
+  flex: 1;
+  resize: none;
+  margin: 0;
+}
+
+.ia-form .botao-primario {
+  margin-top: 0;
+  padding: 14px 20px;
+}
+
+.ia-form .botao-primario:disabled,
+.ia-form .caixa-texto:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* tres pontinhos dentro do balao do log enquanto a resposta nao chega */
+
+.digitando {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+}
+
+.digitando i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--azul);
+  opacity: 0.35;
+  animation: piscar-ponto 1.2s infinite ease-in-out;
+}
+
+.digitando i:nth-child(2) { animation-delay: 0.2s; }
+.digitando i:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes piscar-ponto {
+  0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-3px); }
+}
+
+/* resposta do log em markdown
+   os tamanhos usam em pra acompanhar o tamanho da letra escolhido na tela de configuracoes */
+
+.bolha-log .texto-markdown {
+  max-width: calc(100% - 44px);
+  line-height: 1.5;
+}
+
+.texto-markdown h2 {
+  font-size: 1.3em;
+  font-weight: 700;
+  color: var(--azul);
+  margin: 20px 0 8px;
+}
+
+.texto-markdown h3 {
+  font-size: 1.15em;
+  font-weight: 700;
+  margin: 16px 0 6px;
+}
+
+.texto-markdown h2:first-child,
+.texto-markdown h3:first-child {
+  margin-top: 0;
+}
+
+.texto-markdown p {
+  margin: 0 0 14px;
+}
+
+.texto-markdown ul,
+.texto-markdown ol {
+  margin: 0 0 14px;
+  padding-left: 22px;
+}
+
+.texto-markdown li {
+  margin-bottom: 8px;
+}
+
+.texto-markdown strong {
+  font-weight: 700;
+}
+
+.texto-markdown code {
+  background: #eef1fb;
+  border-radius: 6px;
+  padding: 1px 6px;
+}
+
+.texto-markdown hr {
+  border: none;
+  border-top: 1px solid #e5e5f2;
+  margin: 16px 0;
+}
+
+.texto-markdown > :last-child {
+  margin-bottom: 0;
+}
+
+/* lista dentro de lista */
+
+.texto-markdown li > ul,
+.texto-markdown li > ol {
+  margin: 8px 0 4px;
+}
+
+/* tabela rola de lado quando for mais larga que o balao */
+
+.texto-markdown .tabela-md {
+  overflow-x: auto;
+  margin: 0 0 14px;
+}
+
+.texto-markdown table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.95em;
+}
+
+.texto-markdown th,
+.texto-markdown td {
+  border: 1px solid #cfd3e6;
+  padding: 6px 10px;
+  text-align: center;
+}
+
+.texto-markdown th {
+  background: #eef1fb;
+  font-weight: 700;
+}
+
+/* bloco de codigo e citacao */
+
+.texto-markdown pre {
+  background: #eef1fb;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 0 0 14px;
+  overflow-x: auto;
+}
+
+.texto-markdown pre code {
+  background: none;
+  padding: 0;
+}
+
+.texto-markdown blockquote {
+  margin: 0 0 14px;
+  padding: 4px 0 4px 12px;
+  border-left: 4px solid var(--azul);
+  color: #404252;
+}
+
+.texto-markdown blockquote p {
+  margin: 0;
+}
+
+/* compra de dicas dentro da caixa de dica */
+.dica-compra {
+  margin-top: 10px;
+}
+
+.dica-compra summary {
+  cursor: pointer;
+  color: var(--azul);
+  font-size: 13px;
+  padding: 8px 0;
+}
+
+/* telas bem estreitas */
+@media (max-width: 359px) {
+  .conteudo-app { padding: 16px 14px; }
+  .topo-azul h1 { font-size: 19px; }
+  .rodape-icone { width: 64px; }
+}
+
+/* recompensa conquistada fica verde */
+
+.cartao-conquistada {
+  background: #eafbea;
+  border-color: #57cc47;
+}
+
+.cartao-conquistada .cartao-titulo,
+.texto-conquistada {
+  color: #14631f;
+}
+
+/* pop up de conquista nova aparece por cima da tela de resultado */
+
+.conquista-fundo {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.conquista-caixa {
+  width: 100%;
+  max-width: 340px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #1e7a2e;
+  color: #fff;
+  border: 4px solid var(--amarelo);
+  border-radius: 24px;
+  box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.35);
+  padding: 22px 18px;
+  text-align: center;
+  animation: conquista-entrada 0.45s ease-out;
+}
+
+.conquista-medalha {
+  width: 84px;
+  height: 84px;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 50%;
+  padding: 8px;
+  margin: 0 auto 10px;
+  display: block;
+}
+
+.conquista-selo {
+  display: inline-block;
+  background: var(--amarelo);
+  color: #3d2e00;
+  font-weight: 700;
+  font-size: 12px;
+  border-radius: 60px;
+  padding: 5px 14px;
+  margin: 0 0 12px;
+}
+
+.conquista-titulo {
+  font-size: 19px;
+  font-weight: 600;
+  margin: 0 0 14px;
+  color: #fff;
+}
+
+.conquista-item {
+  background: #fff;
+  color: #14631f;
+  border-radius: 16px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.conquista-nome {
+  font-family: 'Archivo Black', sans-serif;
+  font-size: 17px;
+  margin: 0 0 4px;
+}
+
+.conquista-descricao {
+  font-size: 14px;
+  color: #1f3d24;
+  margin: 0;
+}
+
+.conquista-botao {
+  width: 100%;
+  background: var(--amarelo);
+  color: #1b3d1f;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 15px;
+  border: none;
+  border-radius: 60px;
+  padding: 14px;
+  margin-top: 8px;
+  cursor: pointer;
+}
+
+@keyframes conquista-entrada {
+  0% { transform: scale(0.7); opacity: 0; }
+  70% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+/* ranking os tres primeiros colocados ouro prata e bronze
+   o texto e sempre preto porque tem bom contraste nas tres cores */
+
+.cartao-ouro {
+  background: #f7c948;
+  border-color: #a87a00;
+}
+
+.cartao-prata {
+  background: #d5dae0;
+  border-color: #7d8691;
+}
+
+.cartao-bronze {
+  background: #cd7f32;
+  border-color: #7a4817;
+}
+
+.cartao-ouro .cartao-titulo,
+.cartao-ouro .cartao-corpo,
+.cartao-prata .cartao-titulo,
+.cartao-prata .cartao-corpo,
+.cartao-bronze .cartao-titulo,
+.cartao-bronze .cartao-corpo {
+  color: #111;
 }

@@ -4,36 +4,75 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
 {% endblock %}
 {% block content %}
+{# pop up de conquista aparece quando este desafio fez o aluno ganhar uma recompensa #}
+{% if conquistas_novas %}
+<div class="conquista-fundo" id="conquista-popup" role="dialog" aria-modal="true" aria-labelledby="conquista-titulo">
+  <div class="conquista-caixa">
+    <img class="conquista-medalha" src="{{ url_for('static', filename='img/nav/nav_recompensas.png') }}" alt="">
+    <p class="conquista-selo">Conquista desbloqueada</p>
+    <h2 class="conquista-titulo" id="conquista-titulo">{{ 'Parabéns! Você conquistou:' if conquistas_novas|length == 1 else 'Parabéns! Você conquistou ' ~ conquistas_novas|length ~ ' recompensas:' }}</h2>
+    {% for conquista in conquistas_novas %}
+      <div class="conquista-item">
+        <p class="conquista-nome">{{ conquista.nome }}</p>
+        {% if conquista.descricao %}<p class="conquista-descricao">{{ conquista.descricao }}</p>{% endif %}
+      </div>
+    {% endfor %}
+    <button type="button" class="conquista-botao" id="conquista-fechar">Continuar</button>
+  </div>
+</div>
+<script>
+  var botaoFecharConquista = document.getElementById("conquista-fechar");
+  botaoFecharConquista.addEventListener("click", function () {
+    document.getElementById("conquista-popup").style.display = "none";
+  });
+  botaoFecharConquista.focus();
+</script>
+{% endif %}
 <div class="tela-app">
   <header class="topo-azul"><h1>Resultado</h1></header>
-  <main class="conteudo-app">
+  <main class="conteudo-app conteudo-resultado">
+    <div class="area-resultado">
     <div class="cartao {{ 'feedback-acertou' if passou else 'feedback-errou' }}" style="text-align:center;">
-      <p class="cartao-titulo">{{ '🎉 Parabéns, você passou!' if passou else '😕 Não foi dessa vez' }}</p>
+      <p class="cartao-titulo">{{ 'Parabéns, você passou no desafio!' if passou else 'Quase lá! Você está aprendendo.' }}</p>
       <p class="cartao-corpo">Você acertou {{ acertos }} de {{ total }} perguntas.</p>
-      <p class="cartao-corpo">⏱️ Tempo corrido: {{ tempo_gasto // 60 }}:{{ '%02d'|format(tempo_gasto % 60) }}</p>
+      {% if not passou %}
+        <p class="cartao-corpo">Errar faz parte de aprender. Para passar, acerte todas as perguntas. Tente de novo quando quiser, no seu ritmo.</p>
+      {% endif %}
+      {# no modo sem pressao os tempos ficam escondidos #}
+      {% if not session.get('sem_pressao') %}
+        {% for tempo in tempos_das_perguntas %}
+          <p class="cartao-corpo">Pergunta {{ loop.index }}: {{ tempo // 60 }}:{{ '%02d'|format(tempo % 60) }}</p>
+        {% endfor %}
+        <p class="cartao-corpo"><strong>Tempo total: {{ tempo_gasto // 60 }}:{{ '%02d'|format(tempo_gasto % 60) }}</strong></p>
+      {% endif %}
+      {% if acertos_novos %}
+        <p class="cartao-corpo">🔥 +{{ acertos_novos }} na sequência (agora {{ sequencia }})</p>
+      {% endif %}
+      <p class="cartao-corpo">Dias seguidos estudando: <strong>{{ dias_seguidos }}</strong></p>
       {% if pontos_ganhos %}
-        <p class="cartao-corpo">+{{ pontos_ganhos }} pontos! ⭐</p>
-      {% elif ja_tinha_concluido %}
-        <p class="cartao-corpo">Esse desafio já tinha sido concluído antes, então não gera pontos de novo — mas o tempo conta!</p>
+        <p class="cartao-corpo">Você ganhou {{ pontos_ganhos }} pontos.</p>
+      {% elif era_repeticao %}
+        <p class="cartao-corpo">Esse desafio já tinha sido concluído antes, então repetir não gera pontos nem conta para os dias seguidos{% if not session.get('sem_pressao') %} — mas o tempo conta!{% else %}.{% endif %}</p>
       {% endif %}
     </div>
     <a class="botao-primario" style="display:block; text-align:center; text-decoration:none;" href="{{ url_for('jogo_fase', id_fase=fase.id_fase) }}">Voltar pra fase</a>
+    </div>
   </main>
   <nav class="rodape">
     <a class="rodape-item" href="{{ url_for('agenda') }}">
-      <span class="rodape-icone">📅</span>
+      <span class="rodape-icone"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_agenda.png') }}" alt=""></span>
       <span class="rodape-label">Agenda</span>
     </a>
     <a class="rodape-item" href="{{ url_for('ia_chat') }}">
-      <span class="rodape-icone">☁️</span>
+      <span class="rodape-icone"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_log.png') }}" alt=""></span>
       <span class="rodape-label">Log (IA)</span>
     </a>
     <a class="rodape-item" href="{{ url_for('recompensas') }}">
-      <span class="rodape-icone">🏅</span>
+      <span class="rodape-icone"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_recompensas.png') }}" alt=""></span>
       <span class="rodape-label">Recompensas</span>
     </a>
     <a class="rodape-item rodape-ativo" href="{{ url_for('trilha') }}">
-      <span class="rodape-icone rodape-icone-ativo">⭐</span>
+      <span class="rodape-icone rodape-icone-ativo"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_trilha.png') }}" alt=""></span>
       <span class="rodape-label">Trilha</span>
     </a>
   </nav>

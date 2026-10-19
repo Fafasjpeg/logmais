@@ -5,25 +5,39 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/trilha.css') }}">
 {% endblock %}
 {% block content %}
+{# nomes dos estados que aparecem escritos embaixo de cada fase #}
+{% set nome_do_estado = {'completa': 'Concluída', 'atual': 'Em andamento', 'bloqueada': 'Bloqueada'} %}
 <div class="tela-trilha">
   <header class="trilha-topo">
-    <a class="avatar" href="{{ url_for('perfil') }}">
+    <a class="avatar" href="{{ url_for('perfil') }}" title="Abrir meu perfil">
       <img src="{{ url_for('static', filename='img/trilha/avatar_bg.svg') }}" alt="">
       <span class="avatar-letra">{{ usuario.nome[0]|upper }}</span>
     </a>
-    <div class="selo selo-pontos">
-      <span>⭐</span>
+    <div class="selo selo-pontos" title="Total de pontos que você já ganhou">
+      <span>Pontos</span>
       <strong>{{ desempenho.total_pontos if desempenho else 0 }}</strong>
     </div>
-    <div class="selo selo-sequencia">
-      <span>🔥</span>
+    <div class="selo selo-sequencia" title="Sua sequência atual">
+      <span>🔥 Sequência</span>
       <strong>{{ desempenho.sequencia_atual if desempenho else 0 }}</strong>
     </div>
-    <div class="selo-subnick">🏅 {{ usuario.subnick }}</div>
+    <div class="selo selo-dias" title="Dias seguidos em que você fez um desafio novo">
+      <span>Dias seguidos</span>
+      <strong>{{ dias_seguidos }}</strong>
+    </div>
+    <div class="selo-subnick" title="Seu apelido">{{ usuario.subnick }}</div>
   </header>
 
+  {# legenda fixa que explica os tres estados de uma fase #}
+  <div class="trilha-legenda">
+    <span class="legenda-item"><img src="{{ url_for('static', filename='img/trilha/fase_completa.svg') }}" alt="">Concluída</span>
+    <span class="legenda-item"><img src="{{ url_for('static', filename='img/trilha/fase_atual.svg') }}" alt="">Em andamento</span>
+    <span class="legenda-item"><img src="{{ url_for('static', filename='img/trilha/fase_bloqueada.svg') }}" alt="">Bloqueada</span>
+  </div>
+
   <main class="trilha-caminho">
-    <div class="trilha-caminho-inner">
+    {# a altura vem do python e cresce sozinha quando entram fases novas #}
+    <div class="trilha-caminho-inner" style="height: {{ altura_do_caminho }}px;">
       {% for item in fases %}
         {% set layout = item.layout %}
         {% if layout.conector %}
@@ -34,16 +48,20 @@
             alt="">
         {% endif %}
 
-        <a class="fase-no" href="{{ url_for('jogo_fase', id_fase=item.id_fase) }}" style="left: {{ layout.x }}px; top: {{ layout.y }}px;">
+        <a class="fase-no" href="{{ url_for('jogo_fase', id_fase=item.id_fase) }}" style="left: {{ layout.x }}px; top: {{ layout.y }}px;"
+           aria-label="Fase {{ item.numero }}, {{ item.nome }}, {{ nome_do_estado[item.estado]|lower }}, {{ item.desafios_concluidos }} de {{ item.total_desafios }} desafios">
           <img class="fase-icone" src="{{ url_for('static', filename='img/trilha/fase_' ~ item.estado ~ '.svg') }}" alt="">
-          <span class="fase-emoji">{{ '🔒' if item.estado == 'bloqueada' else item.emoji }}</span>
+          <span class="fase-simbolo">{{ item.simbolo }}</span>
           <span class="fase-badge">
             <img src="{{ url_for('static', filename='img/trilha/badge_' ~ item.estado ~ '.svg') }}" alt="">
-            <span class="fase-badge-num">{{ item.ordem }}</span>
+            <span class="fase-badge-num">{{ item.numero }}</span>
           </span>
-          <p class="fase-estrelas">{{ '⭐' * item.estrelas }}{{ '☆' * (item.total_estrelas - item.estrelas) }}</p>
           <p class="fase-nome">{{ item.nome }}</p>
+          <p class="fase-progresso">{{ item.desafios_concluidos }} de {{ item.total_desafios }} {{ 'desafio' if item.total_desafios == 1 else 'desafios' }}</p>
+          <p class="fase-estado fase-estado-{{ item.estado }}">{{ nome_do_estado[item.estado] }}</p>
         </a>
+      {% else %}
+        <p class="trilha-vazia">Ainda não há fases com desafios disponíveis. Peça para o administrador cadastrar o conteúdo.</p>
       {% endfor %}
 
       <p class="trilha-dica">↓ role para ver mais fases</p>
@@ -52,19 +70,19 @@
 
   <nav class="rodape">
     <a class="rodape-item" href="{{ url_for('agenda') }}">
-      <span class="rodape-icone">📅</span>
+      <span class="rodape-icone"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_agenda.png') }}" alt=""></span>
       <span class="rodape-label">Agenda</span>
     </a>
     <a class="rodape-item" href="{{ url_for('ia_chat') }}">
-      <span class="rodape-icone">☁️</span>
+      <span class="rodape-icone"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_log.png') }}" alt=""></span>
       <span class="rodape-label">Log (IA)</span>
     </a>
     <a class="rodape-item" href="{{ url_for('recompensas') }}">
-      <span class="rodape-icone">🏅</span>
+      <span class="rodape-icone"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_recompensas.png') }}" alt=""></span>
       <span class="rodape-label">Recompensas</span>
     </a>
     <a class="rodape-item rodape-ativo" href="{{ url_for('trilha') }}">
-      <span class="rodape-icone rodape-icone-ativo">⭐</span>
+      <span class="rodape-icone rodape-icone-ativo"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_trilha.png') }}" alt=""></span>
       <span class="rodape-label">Trilha</span>
     </a>
   </nav>

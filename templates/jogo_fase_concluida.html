@@ -4,31 +4,59 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
 {% endblock %}
 {% block content %}
+{# pop up de conquista aparece quando este desafio fez o aluno ganhar uma recompensa #}
+{% if conquistas_novas %}
+<div class="conquista-fundo" id="conquista-popup" role="dialog" aria-modal="true" aria-labelledby="conquista-titulo">
+  <div class="conquista-caixa">
+    <img class="conquista-medalha" src="{{ url_for('static', filename='img/nav/nav_recompensas.png') }}" alt="">
+    <p class="conquista-selo">Conquista desbloqueada</p>
+    <h2 class="conquista-titulo" id="conquista-titulo">{{ 'Parabéns! Você conquistou:' if conquistas_novas|length == 1 else 'Parabéns! Você conquistou ' ~ conquistas_novas|length ~ ' recompensas:' }}</h2>
+    {% for conquista in conquistas_novas %}
+      <div class="conquista-item">
+        <p class="conquista-nome">{{ conquista.nome }}</p>
+        {% if conquista.descricao %}<p class="conquista-descricao">{{ conquista.descricao }}</p>{% endif %}
+      </div>
+    {% endfor %}
+    <button type="button" class="conquista-botao" id="conquista-fechar">Continuar</button>
+  </div>
+</div>
+<script>
+  var botaoFecharConquista = document.getElementById("conquista-fechar");
+  botaoFecharConquista.addEventListener("click", function () {
+    document.getElementById("conquista-popup").style.display = "none";
+  });
+  botaoFecharConquista.focus();
+</script>
+{% endif %}
 <div class="tela-app">
   <header class="topo-azul"><h1>Fase concluída!</h1></header>
-  <main class="conteudo-app">
+  <main class="conteudo-app conteudo-resultado">
+    <div class="area-resultado">
     <div class="cartao feedback-acertou" style="text-align:center;">
-      <p class="cartao-titulo">🏆 {{ fase.nome_fase }} completa!</p>
-      <p class="cartao-corpo">⏱️ Tempo corrido: {{ tempo_total // 60 }}:{{ '%02d'|format(tempo_total % 60) }}</p>
-      <p class="cartao-corpo">⭐ {{ pontos_total }} pontos ganhos</p>
+      <p class="cartao-titulo">Você completou a fase {{ fase.nome_fase }}!</p>
+      {% if not session.get('sem_pressao') %}
+        <p class="cartao-corpo">Tempo total dos desafios: {{ tempo_total // 60 }}:{{ '%02d'|format(tempo_total % 60) }}</p>
+      {% endif %}
+      <p class="cartao-corpo">Pontos ganhos nesta fase: {{ pontos_total }}</p>
     </div>
-    <a class="botao-primario" style="display:block; text-align:center; text-decoration:none;" href="{{ url_for('trilha') }}">Voltar pra trilha</a>
+    <a class="botao-primario" style="display:block; text-align:center; text-decoration:none;" href="{{ url_for('trilha') }}">Voltar para a trilha e abrir a próxima fase</a>
+    </div>
   </main>
   <nav class="rodape">
     <a class="rodape-item" href="{{ url_for('agenda') }}">
-      <span class="rodape-icone">📅</span>
+      <span class="rodape-icone"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_agenda.png') }}" alt=""></span>
       <span class="rodape-label">Agenda</span>
     </a>
     <a class="rodape-item" href="{{ url_for('ia_chat') }}">
-      <span class="rodape-icone">☁️</span>
+      <span class="rodape-icone"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_log.png') }}" alt=""></span>
       <span class="rodape-label">Log (IA)</span>
     </a>
     <a class="rodape-item" href="{{ url_for('recompensas') }}">
-      <span class="rodape-icone">🏅</span>
+      <span class="rodape-icone"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_recompensas.png') }}" alt=""></span>
       <span class="rodape-label">Recompensas</span>
     </a>
     <a class="rodape-item rodape-ativo" href="{{ url_for('trilha') }}">
-      <span class="rodape-icone rodape-icone-ativo">⭐</span>
+      <span class="rodape-icone rodape-icone-ativo"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_trilha.png') }}" alt=""></span>
       <span class="rodape-label">Trilha</span>
     </a>
   </nav>

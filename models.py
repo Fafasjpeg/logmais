@@ -1,62 +1,54 @@
-"""
-LOG+ — models.py
-Mapeamento ORM (SQLAlchemy) de todas as tabelas do banco `logmais`.
+# log+ models.py
+# mapeamento orm sqlalchemy de todas as tabelas do banco logmais
+#
+# importante sobre sql injection
+# usar o orm do sqlalchemy session.query session.add e filtros com .filter
+# ja protege contra sql injection porque as consultas saem parametrizadas
+# nunca monte sql juntando texto vindo do formulario dentro de uma string
+# se precisar de sql cru use text com parametros nomeados
+#
+# este arquivo so define os modelos as telas do flask app.py devem sempre
+# usar o orm e nunca montar sql com dados vindos do usuario
 
-IMPORTANTE sobre SQL Injection:
---------------------------------
-Usar SQLAlchemy ORM (session.query(...), session.add(...), filtros com
-.filter(Coluna == valor)) já protege contra SQL Injection por padrão,
-porque o SQLAlchemy sempre gera queries parametrizadas por baixo dos
-panos — o valor nunca é colado direto na string SQL.
+import os
 
-O que NUNCA deve ser feito neste projeto (isso sim abriria brecha
-pra SQL Injection, mesmo usando SQLAlchemy):
-
-    # ERRADO — concatena o valor direto na query, com session.execute(text(...))
-    email = request.form["email"]
-    session.execute(text(f"SELECT * FROM usuario WHERE email = '{email}'"))
-
-    # CERTO — usa parâmetro nomeado, o driver escapa o valor sozinho
-    session.execute(text("SELECT * FROM usuario WHERE email = :email"), {"email": email})
-
-    # MELHOR AINDA — usa o ORM puro, nem precisa escrever SQL
-    session.query(Usuario).filter(Usuario.email == email).first()
-
-Este arquivo só define os modelos. As telas do Flask (app.py) devem
-sempre usar `session.query(...)` ou `session.add(...)` — nunca montar
-SQL como string concatenada com dados vindos do usuário/formulário.
-"""
-
+from dotenv import load_dotenv
 from sqlalchemy import (
     create_engine, Column, Integer, String, ForeignKey,
     DateTime, Boolean, Text, Enum, CheckConstraint, UniqueConstraint,
-    Time
+    Time, Date
 )
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from sqlalchemy.sql import func
 import enum
 
 # =====================================================================
-# Conexão — troque usuário/senha/host conforme o ambiente de vocês
+# conexao o usuario a senha e o host ficam no arquivo .env variavel database_url
 # =====================================================================
-Engine = create_engine("mysql+pymysql://root:2008fsfc@localhost:3306/logmais")
+# o load_dotenv precisa rodar antes do create_engine pra database_url existir
+load_dotenv()
+URL_DO_BANCO = os.getenv("DATABASE_URL")
+if not URL_DO_BANCO:
+    raise RuntimeError("Falta a variavel DATABASE_URL no arquivo .env (veja o .env.example)")
+Engine = create_engine(URL_DO_BANCO)
 Base = declarative_base()
 _Session = sessionmaker(bind=Engine)
 
 
 def get_session():
-    """Use sempre essa função pra abrir uma sessão nova por requisição."""
+    # use sempre essa funcao pra abrir uma sessao nova por requisicao
     return _Session()
 
 
 # =====================================================================
-# Enums Python (espelham os ENUM do MySQL, dão autocomplete e validação
-# já no lado do Python, antes mesmo de chegar no banco)
+# enums python espelham os enum do mysql dao autocomplete e validacao
+# ja no lado do python antes mesmo de chegar no banco
 # =====================================================================
 class PeriodoDia(str, enum.Enum):
     manha = "manha"
     tarde = "tarde"
     noite = "noite"
+    madrugada = "madrugada"
 
 
 class DiaSemana(str, enum.Enum):
@@ -86,7 +78,7 @@ class TipoRecompensa(str, enum.Enum):
 
 
 
-# USUÁRIO
+# usuario
 class Usuario(Base):
     __tablename__ = "usuario"
 
@@ -94,13 +86,26 @@ class Usuario(Base):
     nome = Column(String(150), nullable=False)
     email = Column(String(150), nullable=False, unique=True)
     senha_hash = Column(String(255), nullable=False)
-    role = Column(Integer, nullable=False, default=2)  # 1 = admin, 2 = usuário
+    role = Column(Integer, nullable=False, default=2)  # 1 = admin 2 = usuario
     subnick = Column(String(50), nullable=False, default="Aprendiz")
     data_cadastro = Column(DateTime, server_default=func.now())
     ativo = Column(Boolean, nullable=False, default=True)
+    modo_sem_pressao = Column(Boolean, nullable=False, default=False)
+    tema = Column(String(20), nullable=False, default="padrao")  # padrao ou contraste
+    tamanho_fonte = Column(String(20), nullable=False, default="normal")  # normal grande ou muito_grande
+    # e-mail confirmado com o codigo enviado pelo brevo o banco assume verdadeiro pras contas
+    # antigas e pro seed e o cadastro do app grava falso de proposito ate o aluno digitar o codigo
+    email_verificado = Column(Boolean, nullable=False, default=True)
+    codigo_ultimo_envio_em = Column(DateTime)  # controla a espera entre um envio e outro
+    codigo_tentativas_erradas = Column(Integer, nullable=False, default=0)
+    codigo_bloqueado_ate = Column(DateTime)  # depois de muitos erros o codigo fica travado ate aqui
+    login_tentativas_erradas = Column(Integer, nullable=False, default=0)  # senhas erradas seguidas no login
+    login_bloqueado_ate = Column(DateTime)  # depois de muitos erros o login fica travado ate aqui
 
     __table_args__ = (
         CheckConstraint("role IN (1, 2)", name="chk_usuario_role"),
+        CheckConstraint("tema IN ('padrao', 'contraste')", name="chk_usuario_tema"),
+        CheckConstraint("tamanho_fonte IN ('normal', 'grande', 'muito_grande')", name="chk_usuario_fonte"),
     )
 
     # relacionamentos de usuario
@@ -115,7 +120,7 @@ class Usuario(Base):
         return self.role == 1
 
 
-# ROTINA e AGENDA
+# rotina e agenda
 class Rotina(Base):
     __tablename__ = "rotina"
 
@@ -147,7 +152,7 @@ class Agenda(Base):
     rotina = relationship("Rotina", back_populates="blocos_agenda")
 
 
-# FASE -> DESAFIO -> PERGUNTA -> ALTERNATIVA (conteúdo — soft delete)
+# fase desafio pergunta alternativa conteudo soft delete
 class Fase(Base):
     __tablename__ = "fase"
 
@@ -157,6 +162,7 @@ class Fase(Base):
     ativo = Column(Boolean, nullable=False, default=True)
 
     desafios = relationship("Desafio", back_populates="fase")
+    tutorial_telas = relationship("TutorialTela", back_populates="fase")
 
 
 class Desafio(Base):
@@ -217,7 +223,7 @@ class Alternativa(Base):
     pergunta = relationship("Pergunta", back_populates="alternativas")
 
 
-# PROGRESSO — resumo por (usuário, desafio) + tentativas + respostas
+# progresso resumo por usuario desafio + tentativas + respostas
 class DesafioUsuario(Base):
     __tablename__ = "desafio_usuario"
 
@@ -267,21 +273,29 @@ class RespostaUsuario(Base):
     pergunta = relationship("Pergunta")
 
 
-# DESEMPENHO
+# desempenho
 class Desempenho(Base):
     __tablename__ = "desempenho"
 
     id_desempenho = Column(Integer, primary_key=True)
     id_usuario = Column(Integer, ForeignKey("usuario.id_usuario", ondelete="CASCADE"), nullable=False, unique=True)
-    total_pontos = Column(Integer, nullable=False, default=0)
-    minutos_totais = Column(Integer, nullable=False, default=0)
+    total_pontos = Column(Integer, nullable=False, default=0)  # tudo que ganhou nunca diminui
+    pontos_carteira = Column(Integer, nullable=False, default=0)  # saldo pra gastar em dicas
+    perguntas_extras_ia = Column(Integer, nullable=False, default=0)  # perguntas do log compradas com pontos
+    minutos_totais = Column(Integer, nullable=False, default=0)  # sempre igual a segundos_totais dividido por 60
+    segundos_totais = Column(Integer, nullable=False, default=0)  # soma exata do tempo de todas as tentativas
+    dica_gratis_usada = Column(Boolean, nullable=False, default=False)  # a dica gratis existe uma vez so
+    dicas_extras = Column(Integer, nullable=False, default=0)  # dicas compradas com pontos da carteira
     sequencia_atual = Column(Integer, nullable=False, default=0)
     sequencia_maxima = Column(Integer, nullable=False, default=0)
+    dias_seguidos = Column(Integer, nullable=False, default=0)
+    dias_seguidos_max = Column(Integer, nullable=False, default=0)
+    ultimo_dia_estudo = Column(Date, nullable=True)
 
     usuario = relationship("Usuario", back_populates="desempenho")
 
 
-# RECOMPENSAS
+# recompensas
 class Recompensa(Base):
     __tablename__ = "recompensa"
 
@@ -312,7 +326,39 @@ class RecompensaUsuario(Base):
     recompensa = relationship("Recompensa", back_populates="usuarios_que_conquistaram")
 
 
-# LOG DA IA
+# tutorial de calculo telas com foto que aparecem antes de uma fase
+class TutorialTela(Base):
+    __tablename__ = "tutorial_tela"
+
+    id_tutorial_tela = Column(Integer, primary_key=True)
+    id_fase = Column(Integer, ForeignKey("fase.id_fase", ondelete="RESTRICT"), nullable=False)
+    ordem = Column(Integer, nullable=False)
+    titulo = Column(String(100), nullable=True)
+    texto = Column(Text, nullable=True)
+    caminho_imagem = Column(String(255), nullable=False)
+    ativo = Column(Boolean, nullable=False, default=True)
+
+    __table_args__ = (
+        UniqueConstraint("id_fase", "ordem", name="uq_tutorial_tela_ordem"),
+    )
+
+    fase = relationship("Fase", back_populates="tutorial_telas")
+
+
+class TutorialUsuario(Base):
+    __tablename__ = "tutorial_usuario"
+
+    id_tutorial_usuario = Column(Integer, primary_key=True)
+    id_usuario = Column(Integer, ForeignKey("usuario.id_usuario", ondelete="CASCADE"), nullable=False)
+    id_fase = Column(Integer, ForeignKey("fase.id_fase", ondelete="RESTRICT"), nullable=False)
+    data_visto = Column(DateTime, server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("id_usuario", "id_fase", name="uq_tutorial_usuario"),
+    )
+
+
+# log da ia
 class LogIA(Base):
     __tablename__ = "log_ia"
 
@@ -326,7 +372,57 @@ class LogIA(Base):
     usuario = relationship("Usuario", back_populates="logs_ia")
 
 
-# Criação das tabelas 
+# feedback do aluno sobre a acessibilidade do app um por mes por aluno
+class FeedbackAcessibilidade(Base):
+    __tablename__ = "feedback_acessibilidade"
+
+    id_feedback = Column(Integer, primary_key=True)
+    id_usuario = Column(Integer, ForeignKey("usuario.id_usuario", ondelete="CASCADE"), nullable=False)
+    nota = Column(Integer, nullable=False)  # 1 muito dificil ate 5 muito facil
+    categoria = Column(String(30), nullable=False)  # o que mais atrapalhou
+    texto = Column(Text, nullable=False, default="")
+    data_envio = Column(DateTime, server_default=func.now())
+
+    __table_args__ = (
+        CheckConstraint("nota BETWEEN 1 AND 5", name="chk_feedback_nota"),
+    )
+
+    usuario = relationship("Usuario")
+
+
+# dicas escritas pelo log cada pergunta tem no maximo uma dica por nivel
+# a dica nao depende do aluno entao todos reaproveitam o mesmo texto
+# e a openai so e chamada uma vez por pergunta e nivel
+class DicaPergunta(Base):
+    __tablename__ = "dica_pergunta"
+
+    id_dica = Column(Integer, primary_key=True)
+    id_pergunta = Column(Integer, ForeignKey("pergunta.id_pergunta", ondelete="CASCADE"), nullable=False)
+    nivel = Column(Integer, nullable=False)  # 1 so a ideia 2 primeiro passo 3 caminho completo
+    texto = Column(Text, nullable=False)
+    data_criacao = Column(DateTime, server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("id_pergunta", "nivel", name="uq_dica_pergunta_nivel"),
+        CheckConstraint("nivel BETWEEN 1 AND 3", name="chk_dica_nivel"),
+    )
+
+
+# anuncio que libera uma dica cada aluno pode usar um por desafio
+class AnuncioDicaUsuario(Base):
+    __tablename__ = "anuncio_dica_usuario"
+
+    id_anuncio_dica = Column(Integer, primary_key=True)
+    id_usuario = Column(Integer, ForeignKey("usuario.id_usuario", ondelete="CASCADE"), nullable=False)
+    id_desafio = Column(Integer, ForeignKey("desafio.id_desafio", ondelete="CASCADE"), nullable=False)
+    data_uso = Column(DateTime, server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("id_usuario", "id_desafio", name="uq_anuncio_dica_usuario"),
+    )
+
+
+# criacao das tabelas
 if __name__ == "__main__":
     Base.metadata.create_all(Engine)
     print("Tabelas criadas com sucesso a partir dos modelos ORM!")

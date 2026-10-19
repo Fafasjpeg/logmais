@@ -8,10 +8,10 @@
   <header class="topo-azul"><h1>Confirmar</h1></header>
   <main class="conteudo-app" style="display:flex; align-items:center; justify-content:center;">
     <div class="cartao" style="text-align:center;">
-      <p style="font-size:36px; margin:0 0 6px;">⚠️</p>
-      <p class="cartao-titulo">{{ titulo }}</p>
+      <p class="cartao-titulo">Atenção: {{ titulo }}</p>
       <p class="cartao-corpo">{{ mensagem }}</p>
       <form method="post" action="{{ url_confirmar }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="botao-primario" style="width:100%; background:#b3261e;">{{ rotulo_confirmar }}</button>
       </form>
       <a class="botao-secundario" style="margin-top:10px;" href="{{ url_cancelar }}">Cancelar</a>

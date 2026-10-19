@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Feedbacks — Admin LOG+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% endblock %}
+{% block content %}
+<div class="admin-shell">
+  <div class="admin-topo">
+    <h1>LOG+ Admin</h1>
+    <nav class="admin-nav">
+      <a href="{{ url_for('admin_dashboard') }}">Dashboard</a>
+      <a href="{{ url_for('admin_usuarios') }}">Usuários</a>
+      <a href="{{ url_for('admin_fases') }}">Fases</a>
+      <a href="{{ url_for('admin_recompensas') }}">Recompensas</a>
+      <a href="{{ url_for('admin_rotinas') }}">Rotinas</a>
+      <a href="{{ url_for('admin_relatorios') }}">Relatórios</a>
+      <a href="{{ url_for('admin_feedbacks') }}">Feedbacks</a>
+      <a href="{{ url_for('logout') }}">Sair</a>
+    </nav>
+  </div>
+
+  <h2 class="admin-titulo-pagina">Feedbacks sobre a acessibilidade</h2>
+
+  <div class="admin-cards">
+    <div class="admin-card">
+      <div class="numero">{{ linhas|length }}</div>
+      <div class="rotulo">feedbacks recebidos</div>
+    </div>
+    <div class="admin-card">
+      <div class="numero">{{ media_das_notas }}</div>
+      <div class="rotulo">nota média (1 muito difícil, 5 muito fácil)</div>
+    </div>
+  </div>
+
+  <table class="admin-tabela">
+    <tr>
+      <th>Data</th>
+      <th>Aluno</th>
+      <th>Nota</th>
+      <th>O que mais atrapalhou</th>
+      <th>Mensagem</th>
+    </tr>
+    {% for feedback, usuario in linhas %}
+      <tr>
+        <td>{{ feedback.data_envio.strftime('%d/%m/%Y %H:%M') if feedback.data_envio }}</td>
+        <td>{{ usuario.nome }}</td>
+        <td>{{ feedback.nota }}</td>
+        <td>{{ nomes_das_categorias.get(feedback.categoria, feedback.categoria) }}</td>
+        <td>{{ feedback.texto or '—' }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5">Nenhum aluno enviou feedback ainda.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

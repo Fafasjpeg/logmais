@@ -1,0 +1,11 @@
+{# trecho de html com as conversas do log nao estende o base #}
+{# a rota ia_historico e a rota ia_perguntar devolvem este trecho e o javascript coloca na tela #}
+{% for conversa in conversas %}
+<div class="ia-conversa" data-id="{{ conversa.id_log }}">
+  {% if conversa.data %}
+    <p class="ia-data">{{ conversa.data.strftime('%d/%m/%Y às %H:%M') }}</p>
+  {% endif %}
+  <div class="bolha-usuario"><p class="texto">{{ conversa.pergunta_usuario }}</p></div>
+  <div class="bolha-log"><span class="avatar-log">Log</span><div class="texto texto-markdown">{{ conversa.resposta_ia|markdown_log }}</div></div>
+</div>
+{% endfor %}

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Anúncio — LOG+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+{% endblock %}
+{% block content %}
+<div class="tela-app">
+  <header class="topo-azul"><h1>Anúncio</h1></header>
+  <main class="conteudo-app conteudo-resultado">
+    <div class="area-resultado">
+    {# anuncio de mentira so pra mostrar o fluxo num app de verdade aqui entraria o anuncio de uma rede de anuncios #}
+    <div class="cartao">
+      <p class="cartao-titulo">Espaço do anúncio</p>
+      <p class="cartao-corpo">Este é um anúncio de exemplo. Espere o tempo acabar para liberar a sua dica.</p>
+      <p class="cartao-corpo">Faltam <strong id="contagem">{{ segundos_anuncio }}</strong> segundos</p>
+    </div>
+
+    <form method="post" action="{{ url_for('jogo_dica', id_desafio=id_desafio, numero=numero) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="forma" value="anuncio">
+      <button type="submit" id="botao-liberar" class="botao-primario" style="width:100%; margin-bottom:12px;" disabled>Liberar a dica</button>
+    </form>
+    <a class="botao-secundario" href="{{ url_for('jogo_pergunta', id_desafio=id_desafio, numero=numero) }}">Voltar sem a dica</a>
+
+    <script>
+      var restante = {{ segundos_anuncio }};
+      var contagem = document.getElementById("contagem");
+      var botao = document.getElementById("botao-liberar");
+
+      var relogio = setInterval(function () {
+        restante = restante - 1;
+        contagem.textContent = restante;
+        if (restante <= 0) {
+          clearInterval(relogio);
+          botao.disabled = false;
+        }
+      }, 1000);
+    </script>
+    </div>
+  </main>
+</div>
+{% endblock %}

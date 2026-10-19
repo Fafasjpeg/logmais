@@ -11,27 +11,26 @@
   </header>
   <main class="conteudo-app" style="display:flex; align-items:center; justify-content:center;">
     <div class="cartao" style="text-align:center;">
-      <p style="font-size:40px; margin:0 0 6px;">🔒</p>
-      <p class="cartao-titulo">Ainda não é hora dessa!</p>
+      <p class="cartao-titulo">Conteúdo bloqueado</p>
       <p class="cartao-corpo">{{ mensagem }}</p>
       <a class="botao-primario" style="display:block; text-align:center; text-decoration:none;" href="{{ voltar_url or url_for('trilha') }}">Voltar</a>
     </div>
   </main>
   <nav class="rodape">
     <a class="rodape-item" href="{{ url_for('agenda') }}">
-      <span class="rodape-icone">📅</span>
+      <span class="rodape-icone"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_agenda.png') }}" alt=""></span>
       <span class="rodape-label">Agenda</span>
     </a>
     <a class="rodape-item" href="{{ url_for('ia_chat') }}">
-      <span class="rodape-icone">☁️</span>
+      <span class="rodape-icone"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_log.png') }}" alt=""></span>
       <span class="rodape-label">Log (IA)</span>
     </a>
     <a class="rodape-item" href="{{ url_for('recompensas') }}">
-      <span class="rodape-icone">🏅</span>
+      <span class="rodape-icone"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_recompensas.png') }}" alt=""></span>
       <span class="rodape-label">Recompensas</span>
     </a>
     <a class="rodape-item rodape-ativo" href="{{ url_for('trilha') }}">
-      <span class="rodape-icone rodape-icone-ativo">⭐</span>
+      <span class="rodape-icone rodape-icone-ativo"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_trilha.png') }}" alt=""></span>
       <span class="rodape-label">Trilha</span>
     </a>
   </nav>

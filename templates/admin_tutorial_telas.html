@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Tutorial de {{ fase.nome_fase }} — Admin LOG+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% endblock %}
+{% block content %}
+<div class="admin-shell">
+  <div class="admin-topo">
+    <h1>LOG+ Admin</h1>
+    <nav class="admin-nav">
+      <a href="{{ url_for('admin_dashboard') }}">Dashboard</a>
+      <a href="{{ url_for('admin_usuarios') }}">Usuários</a>
+      <a href="{{ url_for('admin_fases') }}">Fases</a>
+      <a href="{{ url_for('admin_recompensas') }}">Recompensas</a>
+      <a href="{{ url_for('admin_rotinas') }}">Rotinas</a>
+      <a href="{{ url_for('admin_relatorios') }}">Relatórios</a>
+      <a href="{{ url_for('admin_feedbacks') }}">Feedbacks</a>
+      <a href="{{ url_for('logout') }}">Sair</a>
+    </nav>
+  </div>
+
+  <h2 class="admin-titulo-pagina">Tutorial de cálculo — {{ fase.nome_fase }}</h2>
+  <p>
+    Cada tela abaixo aparece para o aluno, na ordem, antes de ele começar esta fase.
+    Use uma foto da resolução e, se quiser, um título e um texto curto explicando o passo.
+    Se a fase não tiver nenhuma tela ativa, ela abre direto, sem tutorial.
+  </p>
+
+  <div class="admin-acoes" style="margin-bottom:16px;">
+    <a class="admin-botao admin-botao-primario" href="{{ url_for('admin_tutorial_form', id_fase=fase.id_fase) }}">+ Nova tela do tutorial</a>
+    <a class="admin-botao admin-botao-secundario" href="{{ url_for('admin_fases') }}">Voltar pras fases</a>
+  </div>
+
+  {% if not telas %}
+    <p>Esta fase ainda não tem telas de tutorial.</p>
+  {% else %}
+    <table class="admin-tabela">
+      <tr>
+        <th>Ordem</th>
+        <th>Foto</th>
+        <th>Título</th>
+        <th>Texto</th>
+        <th>Status</th>
+        <th>Ações</th>
+      </tr>
+      {% for tela in telas %}
+        <tr>
+          <td>{{ tela.ordem }}</td>
+          <td><img src="{{ url_for('static', filename=tela.caminho_imagem) }}" alt="Foto da tela {{ tela.ordem }}" style="width:90px; height:60px; object-fit:cover; border-radius:6px;"></td>
+          <td>{{ tela.titulo or 'sem título' }}</td>
+          <td>{{ tela.texto or 'sem texto' }}</td>
+          <td><span class="selo-status {{ 'selo-ativo' if tela.ativo else 'selo-inativo' }}">{{ 'ativa' if tela.ativo else 'inativa' }}</span></td>
+          <td class="admin-acoes">
+            <a class="admin-botao admin-botao-secundario" href="{{ url_for('admin_tutorial_form', id_tutorial_tela=tela.id_tutorial_tela) }}">Editar</a>
+            {% if tela.ativo %}
+              <a class="admin-botao admin-botao-perigo" href="{{ url_for('admin_confirmar_status_tutorial', id_tutorial_tela=tela.id_tutorial_tela) }}">Desativar</a>
+            {% else %}
+              <form method="post" action="{{ url_for('admin_alternar_status_tutorial', id_tutorial_tela=tela.id_tutorial_tela) }}" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="admin-botao admin-botao-primario">Ativar</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% endif %}
+</div>
+{% endblock %}

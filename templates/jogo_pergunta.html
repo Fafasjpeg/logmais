@@ -9,17 +9,33 @@
     <a class="topo-voltar" href="{{ url_for('jogo_fase', id_fase=fase.id_fase) }}">←</a>
     <h1>{{ fase.nome_fase }}</h1>
   </header>
-  <main class="conteudo-app">
-    <p class="cartao-corpo" style="text-align:center;">Pergunta {{ numero }} de {{ total }}</p>
+  <main class="conteudo-app conteudo-pergunta">
+    {# o topo fica sempre no mesmo lugar o resto fica centralizado na area da pergunta #}
+    <div class="pergunta-topo">
+    {# a barra mostra quantas perguntas ja foram respondidas #}
+    {% set feitas = numero if resultado else numero - 1 %}
+    {% set percentual = (feitas * 100 / total)|round|int %}
+    <p class="progresso-texto">Pergunta {{ numero }} de {{ total }}</p>
+    <div class="barra-progresso" role="progressbar" aria-label="Progresso do desafio" aria-valuemin="0" aria-valuemax="{{ total }}" aria-valuenow="{{ feitas }}">
+      <div class="barra-progresso-preenchida" style="width: {{ percentual }}%;"></div>
+    </div>
+    {% if not resultado and not session.get('sem_pressao') %}
+      <p class="cartao-corpo" style="text-align:center;">Tempo: <strong id="cronometro">{{ segundos_decorridos // 60 }}:{{ '%02d'|format(segundos_decorridos % 60) }}</strong></p>
+    {% endif %}
+    </div>
 
+    <div class="area-pergunta">
     {% if resultado %}
-      <div class="cartao {{ 'feedback-acertou' if resultado.certa else 'feedback-errou' }}">
-        <p class="cartao-titulo">{{ '✅ Você acertou!' if resultado.certa else '❌ Não foi dessa vez' }}</p>
-        <p class="cartao-corpo">{{ pergunta.enunciado }}</p>
-        {% if not resultado.certa %}
-          <p class="cartao-corpo">Sua resposta: {{ resultado.resposta_dada or '(em branco)' }}</p>
-          <p class="cartao-corpo">Resposta certa: {{ resultado.resposta_certa }}</p>
-        {% endif %}
+      <div class="cartao">
+        <p class="cartao-titulo">Resposta registrada</p>
+        <p class="cartao-corpo pergunta-enunciado">{{ pergunta.enunciado }}</p>
+        <p class="cartao-corpo">Sua resposta:
+          {% if pergunta.tipo.value == 'alternativa' %}
+            <strong>{{ resultado.resposta_dada }}) {{ resultado.texto_escolhido }}</strong>
+          {% else %}
+            <strong>{{ resultado.resposta_dada or '(em branco)' }}</strong>
+          {% endif %}
+        </p>
       </div>
 
       {% if proximo_numero %}
@@ -29,10 +45,70 @@
       {% endif %}
     {% else %}
       <div class="cartao">
-        <p class="cartao-corpo">{{ pergunta.enunciado }}</p>
+        <p class="cartao-corpo pergunta-enunciado">{{ pergunta.enunciado }}</p>
       </div>
 
+      {% with mensagens = get_flashed_messages() %}
+        {% if mensagens %}<ul class="avisos">{% for m in mensagens %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
+      {% endwith %}
+
+      {# dicas do log o texto explica como resolver a pergunta e nunca entrega o resultado #}
+      <details class="dica" id="dicas" {{ 'open' if dica_nivel > 0 }}>
+        <summary class="dica-botao">
+          <svg class="icone-dica" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.4 1.1 2.2h5c0-.8.4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/></svg>
+          Dica
+        </summary>
+        <div class="dica-corpo">
+          {% for texto in textos_dicas %}
+            <p class="dica-texto"><strong>Dica {{ loop.index }}:</strong> {{ texto }}</p>
+          {% endfor %}
+
+          {% if dica_nivel >= maximo_dicas %}
+            <p class="cartao-corpo">Você já usou as {{ maximo_dicas }} dicas desta pergunta.</p>
+          {% else %}
+            <p class="cartao-corpo">{{ 'Quer uma dica?' if dica_nivel == 0 else 'Quer mais uma dica?' }} Ela mostra o caminho, não o resultado. Cada dica liberada usa uma dica sua.</p>
+
+            {% if dica_gratis_disponivel %}
+              <form method="post" action="{{ url_for('jogo_dica', id_desafio=id_desafio, numero=numero) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="forma" value="gratis">
+                <button type="submit" class="botao-secundario dica-acao">Usar minha dica grátis (só existe uma)</button>
+              </form>
+            {% endif %}
+
+            {% if dicas_extras > 0 %}
+              <form method="post" action="{{ url_for('jogo_dica', id_desafio=id_desafio, numero=numero) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="forma" value="comprada">
+                <button type="submit" class="botao-secundario dica-acao">Usar uma dica comprada (você tem {{ dicas_extras }})</button>
+              </form>
+            {% endif %}
+
+            {% if anuncio_disponivel %}
+              <a class="botao-secundario dica-acao" href="{{ url_for('jogo_anuncio', id_desafio=id_desafio, numero=numero) }}">Assistir a um anúncio de {{ segundos_anuncio }} segundos (1 por desafio)</a>
+            {% else %}
+              <p class="cartao-corpo">O anúncio deste desafio já foi usado.</p>
+            {% endif %}
+
+            <details class="dica-compra">
+              <summary>Comprar dicas com pontos (você tem {{ pontos_do_aluno }} na carteira)</summary>
+              {% for quantidade, preco in pacotes_de_dicas.items() %}
+                <form method="post" action="{{ url_for('jogo_dicas_comprar') }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="id_desafio" value="{{ id_desafio }}">
+                  <input type="hidden" name="numero" value="{{ numero }}">
+                  <input type="hidden" name="pacote" value="{{ quantidade }}">
+                  <button type="submit" class="botao-secundario dica-acao" {{ 'disabled' if pontos_do_aluno < preco }}>{{ quantidade }} dicas por {{ preco }} pontos{% if pontos_do_aluno < preco %} (faltam {{ preco - pontos_do_aluno }}){% endif %}</button>
+                </form>
+              {% endfor %}
+            </details>
+          {% endif %}
+        </div>
+      </details>
+
+      <p class="cartao-corpo">{{ 'Escolha uma alternativa e toque em Responder.' if pergunta.tipo.value == 'alternativa' else 'Digite a sua resposta e toque em Responder.' }}</p>
       <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         {% if pergunta.tipo.value == 'alternativa' %}
           {% for alt in alternativas %}
             <label class="opcao-resposta">
@@ -45,23 +121,38 @@
         {% endif %}
         <button type="submit" class="botao-primario" style="width:100%;">Responder</button>
       </form>
+
+      {% if not session.get('sem_pressao') %}
+      <script>
+        // o servidor guarda o tempo de verdade aqui so mostra a contagem
+        var inicio = Date.now() - {{ segundos_decorridos }} * 1000;
+        var cronometro = document.getElementById("cronometro");
+
+        setInterval(function () {
+          var segundos = Math.floor((Date.now() - inicio) / 1000);
+          var resto = segundos % 60;
+          cronometro.textContent = Math.floor(segundos / 60) + ":" + (resto < 10 ? "0" : "") + resto;
+        }, 1000);
+      </script>
+      {% endif %}
     {% endif %}
+    </div>
   </main>
   <nav class="rodape">
     <a class="rodape-item" href="{{ url_for('agenda') }}">
-      <span class="rodape-icone">📅</span>
+      <span class="rodape-icone"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_agenda.png') }}" alt=""></span>
       <span class="rodape-label">Agenda</span>
     </a>
     <a class="rodape-item" href="{{ url_for('ia_chat') }}">
-      <span class="rodape-icone">☁️</span>
+      <span class="rodape-icone"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_log.png') }}" alt=""></span>
       <span class="rodape-label">Log (IA)</span>
     </a>
     <a class="rodape-item" href="{{ url_for('recompensas') }}">
-      <span class="rodape-icone">🏅</span>
+      <span class="rodape-icone"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_recompensas.png') }}" alt=""></span>
       <span class="rodape-label">Recompensas</span>
     </a>
     <a class="rodape-item rodape-ativo" href="{{ url_for('trilha') }}">
-      <span class="rodape-icone rodape-icone-ativo">⭐</span>
+      <span class="rodape-icone rodape-icone-ativo"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_trilha.png') }}" alt=""></span>
       <span class="rodape-label">Trilha</span>
     </a>
   </nav>
