@@ -1,10 +1,18 @@
-{% extends "base.html" %}
-{% block title %}Trilha — LOG+{% endblock %}
-{% block extra_css %}
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trilha — LOG+</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;600;700&family=Lexend:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/trilha.css') }}">
-{% endblock %}
-{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/acessibilidade.css') }}">
+</head>
+<body class="tema-{{ session.get('tema', 'padrao') }} fonte-{{ session.get('tamanho_fonte', 'normal') }}">
 {# nomes dos estados que aparecem escritos embaixo de cada fase #}
 {% set nome_do_estado = {'completa': 'Concluída', 'atual': 'Em andamento', 'bloqueada': 'Bloqueada'} %}
 <div class="tela-trilha">
@@ -87,4 +95,5 @@
     </a>
   </nav>
 </div>
-{% endblock %}
+</body>
+</html>

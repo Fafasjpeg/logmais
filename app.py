@@ -1,11 +1,4 @@
-# log+ app.py
-#
-# todas as rotas do backend ficam neste unico arquivo de proposito
-# pra ficar facil de ler de cima a baixo sem pular entre arquivos
-#
-# cada rota que precisa do banco abre sua propria sessao com
-# db = _session e fecha com db.close antes de responder
-# nao tem sessao global nem hook escondido rodando sozinho
+# log+ app.py todas as rotas ficam num arquivo so e cada rota abre a propria sessao com db = _Session e fecha com db.close
 import hashlib
 import hmac
 import json
@@ -56,19 +49,13 @@ if not app.secret_key:
     raise RuntimeError("Falta a variavel SECRET_KEY no arquivo .env (veja o .env.example)")
 
 
-# seguranca basica
-# o cookie da sessao nao pode ser lido por javascript e so acompanha cliques feitos dentro do proprio site
-# em producao com https ligue COOKIE_SEGURO=1 no .env pro cookie so viajar por https
+# seguranca basica o cookie da sessao fica fechado pro javascript e so viaja por https com COOKIE_SEGURO=1 no .env
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_SECURE"] = os.getenv("COOKIE_SEGURO", "0") == "1"
 
 
-# protecao contra csrf
-# csrf e quando outro site faz o navegador do aluno enviar um formulario sem ele saber
-# cada sessao ganha um codigo secreto e todo formulario post leva esse codigo escondido
-# a funcao conferir_token_csrf roda antes de toda rota e recusa o post que veio sem o codigo certo
-# ela fica num lugar so porque esquecer a conferencia em uma unica rota deixaria um buraco
+# protecao contra csrf cada sessao tem um codigo secreto e conferir_token_csrf recusa todo post sem ele antes de qualquer rota
 def pegar_token_csrf():
     if "csrf_token" not in session:
         session["csrf_token"] = secrets.token_hex(16)
@@ -99,9 +86,7 @@ def conferir_token_csrf():
     ), 400
 
 
-# cabecalhos que pedem ao navegador pra ser mais cuidadoso
-# nosniff impede de adivinhar o tipo de um arquivo
-# deny impede que outro site mostre o app dentro de um quadro escondido
+# cabecalhos de seguranca nosniff impede adivinhar o tipo do arquivo e deny impede outro site de mostrar o app num quadro escondido
 @app.after_request
 def colocar_cabecalhos_de_seguranca(resposta):
     resposta.headers["X-Content-Type-Options"] = "nosniff"
@@ -125,12 +110,67 @@ def conexao():
         db.close()
 
 
-# pagina inicial manda pro login pro assistente de rotina se o
-# usuario ainda nao preencheu ou pra agenda
+# valores gravados na coluna role da tabela usuario
+ROLE_ADMIN = 1
+ROLE_ALUNO = 2
+
+
+# consultas pequenas usadas por varias rotas cada uma so devolve o que achou e quem chama decide o que fazer
+def buscar_usuario_ativo_pelo_email(db, email):
+    return db.query(Usuario).filter(Usuario.email == email, Usuario.ativo == True).first()
+
+
+def buscar_desempenho_do_usuario(db, id_usuario):
+    return db.query(Desempenho).filter(Desempenho.id_usuario == id_usuario).first()
+
+
 def usuario_tem_rotina(db, id_usuario):
     return db.query(Rotina).filter(Rotina.id_usuario == id_usuario).first() is not None
 
 
+def aluno_ja_usou_o_anuncio(db, id_usuario, id_desafio):
+    # cada aluno pode usar o anuncio de dica uma vez por desafio
+    return (
+        db.query(AnuncioDicaUsuario)
+        .filter(AnuncioDicaUsuario.id_usuario == id_usuario, AnuncioDicaUsuario.id_desafio == id_desafio)
+        .first()
+        is not None
+    )
+
+
+def buscar_ranking_dos_alunos(db):
+    # placar dos alunos do que tem mais pontos pro que tem menos usado no ranking e no relatorio do admin
+    return (
+        db.query(Usuario.nome, Usuario.subnick, Desempenho.total_pontos, Desempenho.sequencia_maxima)
+        .join(Desempenho, Desempenho.id_usuario == Usuario.id_usuario)
+        .filter(Usuario.role == ROLE_ALUNO)
+        .order_by(Desempenho.total_pontos.desc())
+        .all()
+    )
+
+
+def cobrar_pacote_da_carteira(desempenho, custo_em_pontos):
+    # tira os pontos da carteira e devolve true se tinha o bastante sem mexer no total de pontos nem no ranking
+    pontos_na_carteira = desempenho.pontos_carteira if desempenho else 0
+    if desempenho is None or pontos_na_carteira < custo_em_pontos:
+        flash(
+            f"Você precisa de {custo_em_pontos} pontos na carteira para esse pacote. "
+            f"Você tem {pontos_na_carteira}."
+        )
+        return False
+    desempenho.pontos_carteira -= custo_em_pontos
+    return True
+
+
+def ler_numero_inteiro_do_formulario(nome_do_campo):
+    # campo vazio ou com letras vira zero pra rota validar sem dar erro
+    try:
+        return int(request.form.get(nome_do_campo, 0))
+    except ValueError:
+        return 0
+
+
+# pagina inicial manda pro login ou pro assistente de rotina se ainda nao preencheu ou pra agenda
 @app.route("/")
 def index():
     if not session.get("id_usuario"):
@@ -147,20 +187,7 @@ def index():
     return redirect(url_for("agenda"))
 
 
-# codigo de verificacao por e-mail usado no cadastro e na recuperacao de senha
-#
-# o codigo NAO e sorteado e NAO fica guardado no banco
-# ele e calculado com uma conta que so o servidor sabe fazer
-# a conta mistura a SECRET_KEY do app o e-mail a senha atual e o minuto
-# na hora de conferir o servidor refaz a mesma conta dos ultimos 10 minutos
-# se algum resultado bater com o que o aluno digitou o codigo vale
-# assim ele expira sozinho em no maximo 10 minutos sem precisar de tabela
-# e como a conta usa a senha atual um codigo de recuperacao ja usado deixa de valer
-#
-# o e-mail e enviado pela api da brevo com a chave BREVO_API_KEY do arquivo .env
-# o endereco que aparece como remetente fica em EMAIL_REMETENTE no .env
-# e nao e mostrado em nenhuma tela do app
-# sem chave o codigo aparece no terminal do flask pra dar pra testar sem enviar e-mail
+# codigo de e-mail calculado com a SECRET_KEY e o minuto sem tabela no banco vale 10 minutos e sai pela brevo ou no terminal sem chave
 EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 CHAVE_DA_BREVO = os.getenv("BREVO_API_KEY", "")
 EMAIL_REMETENTE = os.getenv("EMAIL_REMETENTE", "")
@@ -169,13 +196,13 @@ SEGUNDOS_ENTRE_ENVIOS_DE_CODIGO = 60
 MAXIMO_DE_ERROS_NO_CODIGO = 5
 MINUTOS_DE_BLOQUEIO_DEPOIS_DOS_ERROS = 15
 
-# trava do login depois de 5 senhas erradas seguidas a conta espera 10 minutos
-# isso impede que alguem teste milhares de senhas em uma conta
+# trava do login depois de 5 senhas erradas seguidas a conta espera 10 minutos pra ninguem testar milhares de senhas
 MAXIMO_DE_ERROS_NO_LOGIN = 5
 MINUTOS_DE_BLOQUEIO_DO_LOGIN = 10
 
 # tamanhos que cabem no banco e que evitam senhas gigantes
 TAMANHO_MAXIMO_DO_NOME_E_DO_EMAIL = 150
+TAMANHO_MAXIMO_DO_APELIDO = 50
 TAMANHO_MINIMO_DA_SENHA = 6
 TAMANHO_MAXIMO_DA_SENHA = 128
 
@@ -209,8 +236,7 @@ def limpar_codigo_digitado(texto_digitado):
 
 
 def conferir_codigo_com_limite(db, usuario, finalidade, codigo_digitado):
-    # devolve certo errado ou bloqueado
-    # depois de 5 erros seguidos o codigo fica travado por 15 minutos
+    # devolve certo errado ou bloqueado e depois de 5 erros seguidos o codigo fica travado por 15 minutos
     agora = datetime.now()
 
     if usuario.codigo_bloqueado_ate is not None:
@@ -311,12 +337,16 @@ def enviar_codigo_respeitando_a_espera(db, usuario, finalidade):
     return "enviado"
 
 
-def guardar_login_na_sessao(usuario):
-    session["id_usuario"] = usuario.id_usuario
-    # as preferencias ficam na sessao pro base.html e as telas lerem sem consultar o banco
+def guardar_preferencias_na_sessao(usuario):
+    # as preferencias ficam na sessao pra cada tela ler sem consultar o banco
     session["tema"] = usuario.tema
     session["tamanho_fonte"] = usuario.tamanho_fonte
     session["sem_pressao"] = usuario.modo_sem_pressao
+
+
+def guardar_login_na_sessao(usuario):
+    session["id_usuario"] = usuario.id_usuario
+    guardar_preferencias_na_sessao(usuario)
 
 
 # cadastro o aluno so entra depois de digitar o codigo enviado por e-mail
@@ -347,13 +377,12 @@ def cadastro():
         try:
             usuario = db.query(Usuario).filter(Usuario.email == email).first()
 
-            if usuario and (usuario.email_verificado or usuario.role != 2):
+            if usuario and (usuario.email_verificado or usuario.role != ROLE_ALUNO):
                 flash("Já existe uma conta com esse e-mail.")
                 return render_template("cadastro.html")
 
             if usuario:
-                # conta criada mas nunca confirmada pode ser refeita
-                # senao quem digitou o e-mail errado ou de outra pessoa travaria o cadastro
+                # conta nunca confirmada pode ser refeita senao quem digitou o e-mail errado travaria o cadastro
                 usuario.nome = nome
                 usuario.senha_hash = generate_password_hash(senha)
                 # a senha mudou entao o codigo antigo nao vale mais e precisa sair um novo na hora
@@ -399,7 +428,7 @@ def verificar_email():
 
         db = _Session()
         try:
-            usuario = db.query(Usuario).filter(Usuario.email == email, Usuario.ativo == True).first()
+            usuario = buscar_usuario_ativo_pelo_email(db, email)
             if usuario is None or usuario.email_verificado:
                 session.pop("email_para_verificar", None)
                 flash("Faça login para continuar.")
@@ -431,7 +460,7 @@ def reenviar_codigo_de_cadastro():
 
     db = _Session()
     try:
-        usuario = db.query(Usuario).filter(Usuario.email == email, Usuario.ativo == True).first()
+        usuario = buscar_usuario_ativo_pelo_email(db, email)
         if usuario is None or usuario.email_verificado:
             session.pop("email_para_verificar", None)
             return redirect(url_for("login"))
@@ -458,11 +487,7 @@ def login():
 
         db = _Session()
         try:
-            usuario = (
-                db.query(Usuario)
-                .filter(Usuario.email == email, Usuario.ativo == True)
-                .first()
-            )
+            usuario = buscar_usuario_ativo_pelo_email(db, email)
 
             agora = datetime.now()
             if usuario and usuario.login_bloqueado_ate and usuario.login_bloqueado_ate > agora:
@@ -482,7 +507,7 @@ def login():
                     return redirect(url_for("verificar_email"))
 
                 guardar_login_na_sessao(usuario)
-                if usuario.role == 1:
+                if usuario.role == ROLE_ADMIN:
                     return redirect(url_for("admin_dashboard"))
                 return redirect(url_for("index"))
 
@@ -507,11 +532,7 @@ def logout():
     return redirect(url_for("login"))
 
 
-# recuperacao de senha em dois passos
-# 1 o aluno digita o e-mail e recebe o codigo
-# 2 digita o codigo e a nova senha
-# a mensagem do passo 1 e sempre a mesma exista ou nao o e-mail
-# pra ninguem descobrir quais e-mails tem conta
+# recuperacao de senha em dois passos e o aviso do passo 1 e sempre igual pra ninguem descobrir quais e-mails tem conta
 @app.route("/auth/recuperar-senha", methods=["GET", "POST"])
 def recuperar_senha():
     if request.method == "POST":
@@ -523,11 +544,7 @@ def recuperar_senha():
 
         db = _Session()
         try:
-            usuario = (
-                db.query(Usuario)
-                .filter(Usuario.email == email, Usuario.ativo == True)
-                .first()
-            )
+            usuario = buscar_usuario_ativo_pelo_email(db, email)
             if usuario:
                 enviar_codigo_respeitando_a_espera(db, usuario, "recuperar_senha")
         finally:
@@ -564,11 +581,7 @@ def recuperar_senha_codigo():
         else:
             db = _Session()
             try:
-                usuario = (
-                    db.query(Usuario)
-                    .filter(Usuario.email == email, Usuario.ativo == True)
-                    .first()
-                )
+                usuario = buscar_usuario_ativo_pelo_email(db, email)
                 resultado = "errado"
                 if usuario:
                     resultado = conferir_codigo_com_limite(db, usuario, "recuperar_senha", codigo_digitado)
@@ -592,10 +605,7 @@ def recuperar_senha_codigo():
     return render_template("recuperar_senha_codigo.html", email=email)
 
 
-# assistente de rotina formulario estilo chat com o mascote log
-# preenchido no primeiro acesso e reaproveitado pra reconfigurar
-# o enum periodo_dia do banco tem manha/tarde/noite/madrugada
-# madrugada fica por ultimo pra manha continuar sendo a opcao marcada de inicio
+# assistente de rotina estilo chat com o mascote log e madrugada fica por ultimo pra manha continuar marcada de inicio
 PERIODOS_DIA = [("manha", "Manhã"), ("tarde", "Tarde"), ("noite", "Noite"), ("madrugada", "Madrugada")]
 DURACOES_MINUTOS = [10, 20, 30]
 DIAS_SEMANA = [
@@ -615,10 +625,7 @@ def configurar_rotina():
         return redirect(url_for("login"))
 
     if request.method == "POST":
-        try:
-            minutos_por_dia = int(request.form.get("minutos_por_dia", 0))
-        except ValueError:
-            minutos_por_dia = 0
+        minutos_por_dia = ler_numero_inteiro_do_formulario("minutos_por_dia")
         periodo_dia = request.form.get("periodo_dia", "")
         dias_escolhidos = request.form.getlist("dias")
 
@@ -667,8 +674,7 @@ def configurar_rotina():
     )
 
 
-# agenda mostra os blocos de estudo da semana montados pelo
-# assistente de rotina
+# agenda mostra os blocos de estudo da semana montados pelo assistente de rotina
 DIA_SEMANA_LABEL = {
     "seg": "Segunda-feira",
     "ter": "Terça-feira",
@@ -694,10 +700,12 @@ def agenda():
         usuario = db.get(Usuario, session["id_usuario"])
         rotina = db.query(Rotina).filter(Rotina.id_usuario == usuario.id_usuario).first()
         blocos = db.query(Agenda).filter(Agenda.id_rotina == rotina.id_rotina).all()
-        blocos = sorted(blocos, key=lambda b: DIA_SEMANA_PYTHON.index(b.dia_semana.value))
+        blocos = sorted(blocos, key=lambda bloco: DIA_SEMANA_PYTHON.index(bloco.dia_semana.value))
 
-        hoje = DIA_SEMANA_PYTHON[datetime.now().weekday()]
-        bloco_de_hoje = next((b for b in blocos if b.dia_semana.value == hoje), None)
+        dia_da_semana_de_hoje = DIA_SEMANA_PYTHON[datetime.now().weekday()]
+        bloco_de_hoje = next(
+            (bloco for bloco in blocos if bloco.dia_semana.value == dia_da_semana_de_hoje), None
+        )
         if bloco_de_hoje is None:
             progresso_hoje = 0
             minutos_restando = 0
@@ -722,8 +730,7 @@ def agenda():
 
 # trilha caminho com todas as fases ativas e o progresso do usuario logado
 
-# posicao em pixels de cada fase no caminho e do conector que liga ela a fase anterior
-# as 11 primeiras posicoes vem direto do prototipo no figma
+# posicao em pixels de cada fase e do conector que liga ela a fase anterior e as 11 primeiras vem do prototipo no figma
 LAYOUT_FASES = {
     1: {"x": 151, "y": 127, "conector": None},
     2: {"x": 76, "y": 337, "conector": {"img": "conector_estreito_rl.svg", "x": 118, "y": 171, "w": 75, "h": 210}},
@@ -738,10 +745,7 @@ LAYOUT_FASES = {
     11: {"x": 151, "y": 2227, "conector": {"img": "conector_estreito_lr.svg", "x": 108, "y": 2061, "w": 85, "h": 210}},
 }
 
-# a partir da fase 12 a trilha repete o padrao que ja existe
-# cada fase fica 210 pixels abaixo da anterior
-# posicao par fica na esquerda e posicao impar fica na direita
-# o conector comeca 44 pixels abaixo do topo da fase anterior
+# a partir da fase 12 o padrao se repete 210 pixels abaixo da anterior com posicao par na esquerda e impar na direita
 TOPO_DA_PRIMEIRA_FASE = 127
 DISTANCIA_ENTRE_FASES = 210
 DISTANCIA_DO_TOPO_ATE_O_CONECTOR = 44
@@ -758,17 +762,22 @@ def calcular_layout_da_fase(posicao_na_trilha):
 
     if posicao_na_trilha == 12:
         # a fase 11 fica no centro entao a 12 repete a ligacao da fase 2
-        conector = {"img": "conector_estreito_rl.svg", "x": 118, "y": y_do_conector, "w": 75, "h": DISTANCIA_ENTRE_FASES}
-        return {"x": 76, "y": y_da_fase, "conector": conector}
-
-    if posicao_na_trilha % 2 == 0:
+        x_da_fase, imagem_do_conector, largura_do_conector = 76, "conector_estreito_rl.svg", 75
+    elif posicao_na_trilha % 2 == 0:
         # fase na esquerda o conector desce da direita pra esquerda
-        conector = {"img": "conector_medio_rl.svg", "x": 118, "y": y_do_conector, "w": 150, "h": DISTANCIA_ENTRE_FASES}
-        return {"x": 76, "y": y_da_fase, "conector": conector}
+        x_da_fase, imagem_do_conector, largura_do_conector = 76, "conector_medio_rl.svg", 150
+    else:
+        # fase na direita o conector desce da esquerda pra direita
+        x_da_fase, imagem_do_conector, largura_do_conector = 226, "conector_medio_lr.svg", 150
 
-    # fase na direita o conector desce da esquerda pra direita
-    conector = {"img": "conector_medio_lr.svg", "x": 118, "y": y_do_conector, "w": 150, "h": DISTANCIA_ENTRE_FASES}
-    return {"x": 226, "y": y_da_fase, "conector": conector}
+    conector = {
+        "img": imagem_do_conector,
+        "x": 118,
+        "y": y_do_conector,
+        "w": largura_do_conector,
+        "h": DISTANCIA_ENTRE_FASES,
+    }
+    return {"x": x_da_fase, "y": y_da_fase, "conector": conector}
 
 
 # texto mostrado dentro do circulo de cada fase as outras mostram o numero da fase
@@ -781,26 +790,28 @@ SIMBOLO_POR_FASE = {
 
 
 def desafio_esta_pronto_para_jogar(desafio):
-    # um desafio so aparece pro aluno se estiver ativo e tiver pelo menos uma pergunta ativa
-    # sem pergunta ele nunca poderia ser concluido e travaria a fase inteira
+    # desafio so aparece se estiver ativo e com pelo menos uma pergunta ativa senao nunca seria concluido e travaria a fase
     return desafio.ativo and any(pergunta.ativo for pergunta in desafio.perguntas)
 
 
+def desafios_prontos_da_fase(fase):
+    # desafios que o aluno pode jogar na ordem em que aparecem na fase
+    desafios_prontos = [desafio for desafio in fase.desafios if desafio_esta_pronto_para_jogar(desafio)]
+    return sorted(desafios_prontos, key=lambda desafio: desafio.ordem)
+
+
 def calcular_estado_fases(db, id_usuario):
-    # estado completa atual bloqueada de cada fase ativa pro usuario logado
-    # usada pela trilha e tambem pra barrar o acesso direto por url
-    # a uma fase que ainda devia estar bloqueada
+    # estado completa atual ou bloqueada de cada fase ativa usado pela trilha e pra barrar acesso direto por url
     fases_ativas = db.query(Fase).filter(Fase.ativo == True).order_by(Fase.ordem).all()
 
     estados = {}
     ja_tem_fase_atual = False
     for fase in fases_ativas:
-        desafios_ativos = [d for d in fase.desafios if desafio_esta_pronto_para_jogar(d)]
+        desafios_ativos = desafios_prontos_da_fase(fase)
         total = len(desafios_ativos)
-        ids_desafios = [d.id_desafio for d in desafios_ativos]
+        ids_desafios = [desafio.id_desafio for desafio in desafios_ativos]
 
-        # fase sem nenhum desafio ativo nao aparece na trilha
-        # se aparecesse ela viraria a fase atual pra sempre e travaria as proximas
+        # fase sem desafio ativo nao aparece na trilha senao viraria a fase atual pra sempre e travaria as proximas
         if total == 0:
             continue
 
@@ -826,6 +837,12 @@ def calcular_estado_fases(db, id_usuario):
     return estados
 
 
+def fase_esta_bloqueada(db, id_usuario, fase):
+    # fase fica bloqueada ate a anterior ser concluida e isso barra quem digita o endereco da fase direto no navegador
+    estado_da_fase = calcular_estado_fases(db, id_usuario).get(fase.id_fase)
+    return estado_da_fase is not None and estado_da_fase["estado"] == "bloqueada"
+
+
 @app.route("/jogo/trilha")
 def trilha():
     if not session.get("id_usuario"):
@@ -834,7 +851,7 @@ def trilha():
     db = _Session()
     try:
         usuario = db.get(Usuario, session["id_usuario"])
-        desempenho = db.query(Desempenho).filter(Desempenho.id_usuario == usuario.id_usuario).first()
+        desempenho = buscar_desempenho_do_usuario(db, usuario.id_usuario)
 
         fases_ativas = db.query(Fase).filter(Fase.ativo == True).order_by(Fase.ordem).all()
         estados_fases = calcular_estado_fases(db, usuario.id_usuario)
@@ -846,18 +863,17 @@ def trilha():
             if fase.id_fase not in estados_fases:
                 continue
 
-            # o desenho usa a posicao na fila e nao o campo ordem
-            # assim uma fase desativada nao deixa um buraco no caminho
+            # o desenho usa a posicao na fila e nao o campo ordem pra fase desativada nao deixar buraco no caminho
             posicao_na_trilha += 1
-            info = estados_fases[fase.id_fase]
+            estado_da_fase = estados_fases[fase.id_fase]
             fases.append(
                 {
                     "id_fase": fase.id_fase,
                     "numero": posicao_na_trilha,
                     "nome": fase.nome_fase,
-                    "estado": info["estado"],
-                    "desafios_concluidos": info["completados"],
-                    "total_desafios": info["total"],
+                    "estado": estado_da_fase["estado"],
+                    "desafios_concluidos": estado_da_fase["completados"],
+                    "total_desafios": estado_da_fase["total"],
                     "simbolo": SIMBOLO_POR_FASE.get(fase.nome_fase, str(posicao_na_trilha)),
                     "layout": calcular_layout_da_fase(posicao_na_trilha),
                 }
@@ -881,57 +897,59 @@ def trilha():
     )
 
 
-# fluxo de jogo escolher um desafio dentro de uma fase e responder
-# suas perguntas
+# fluxo de jogo escolher um desafio dentro de uma fase e responder suas perguntas
 def calcular_estado_desafios(db, id_usuario, desafios_ativos):
-    # mesma regra da trilha so que pros desafios dentro de uma fase
-    # completo se ja foi concluido atual o primeiro incompleto na
-    # ordem os demais ficam bloqueados
-    ids = [d.id_desafio for d in desafios_ativos]
-    concluidos = set()
-    if ids:
-        linhas = (
+    # mesma regra da trilha pros desafios da fase completo se concluido atual o primeiro incompleto e os demais bloqueados
+    ids_dos_desafios = [desafio.id_desafio for desafio in desafios_ativos]
+    ids_dos_desafios_concluidos = set()
+    if ids_dos_desafios:
+        progressos_concluidos = (
             db.query(DesafioUsuario)
             .filter(
                 DesafioUsuario.id_usuario == id_usuario,
-                DesafioUsuario.id_desafio.in_(ids),
+                DesafioUsuario.id_desafio.in_(ids_dos_desafios),
                 DesafioUsuario.concluido_primeira_vez == True,
             )
             .all()
         )
-        concluidos = {linha.id_desafio for linha in linhas}
+        ids_dos_desafios_concluidos = {progresso.id_desafio for progresso in progressos_concluidos}
 
     estados = {}
-    ja_tem_atual = False
-    for d in sorted(desafios_ativos, key=lambda x: x.ordem):
-        if d.id_desafio in concluidos:
-            estados[d.id_desafio] = "completa"
-        elif not ja_tem_atual:
-            estados[d.id_desafio] = "atual"
-            ja_tem_atual = True
+    ja_tem_desafio_atual = False
+    for desafio in sorted(desafios_ativos, key=lambda desafio_da_lista: desafio_da_lista.ordem):
+        if desafio.id_desafio in ids_dos_desafios_concluidos:
+            estados[desafio.id_desafio] = "completa"
+        elif not ja_tem_desafio_atual:
+            estados[desafio.id_desafio] = "atual"
+            ja_tem_desafio_atual = True
         else:
-            estados[d.id_desafio] = "bloqueada"
+            estados[desafio.id_desafio] = "bloqueada"
     return estados
 
 
-def conceder_recompensas_automaticas(db, id_usuario, desempenho):
-    # confere se o usuario ja bateu o valor necessario de alguma
-    # recompensa pontos/sequencia/horas e se sim credita ela
-    # devolve o nome e a descricao das recompensas conquistadas agora pra tela mostrar o pop up
-    conquistas_novas = []
-    if not desempenho:
-        return conquistas_novas
-    valores_atuais = {
+def medir_progresso_do_aluno_para_recompensas(desempenho):
+    # cada tipo de recompensa olha um numero diferente do desempenho do aluno
+    if desempenho is None:
+        return {"pontos": 0, "sequencia": 0, "horas": 0}
+    return {
         "pontos": desempenho.total_pontos,
         "sequencia": desempenho.sequencia_maxima,
         "horas": desempenho.minutos_totais // 60,
     }
-    ja_tem = {
-        ru.id_recompensa
-        for ru in db.query(RecompensaUsuario).filter(RecompensaUsuario.id_usuario == id_usuario)
+
+
+def conceder_recompensas_automaticas(db, id_usuario, desempenho):
+    # confere se o aluno bateu o valor de alguma recompensa e credita e devolve nome e descricao das novas pro pop up
+    conquistas_novas = []
+    if not desempenho:
+        return conquistas_novas
+    valores_atuais = medir_progresso_do_aluno_para_recompensas(desempenho)
+    ids_das_recompensas_que_ja_tem = {
+        recompensa_do_aluno.id_recompensa
+        for recompensa_do_aluno in db.query(RecompensaUsuario).filter(RecompensaUsuario.id_usuario == id_usuario)
     }
     for recompensa in db.query(Recompensa).filter(Recompensa.ativo == True):
-        if recompensa.id_recompensa in ja_tem:
+        if recompensa.id_recompensa in ids_das_recompensas_que_ja_tem:
             continue
         if valores_atuais.get(recompensa.tipo.value, 0) >= recompensa.valor_necessario:
             db.add(RecompensaUsuario(id_usuario=id_usuario, id_recompensa=recompensa.id_recompensa))
@@ -950,8 +968,7 @@ def jogo_fase(id_fase):
         if fase is None or not fase.ativo:
             return redirect(url_for("trilha"))
 
-        estado_da_fase = calcular_estado_fases(db, session["id_usuario"]).get(fase.id_fase)
-        if estado_da_fase and estado_da_fase["estado"] == "bloqueada":
+        if fase_esta_bloqueada(db, session["id_usuario"], fase):
             return render_template(
                 "bloqueado.html",
                 mensagem=f"Complete a fase anterior primeiro pra desbloquear '{fase.nome_fase}'.",
@@ -969,21 +986,18 @@ def jogo_fase(id_fase):
             if not ja_viu_o_tutorial:
                 return redirect(url_for("tutorial_fase", id_fase=fase.id_fase, numero=1))
 
-        desafios_ativos = sorted(
-            [d for d in fase.desafios if desafio_esta_pronto_para_jogar(d)], key=lambda d: d.ordem
-        )
+        desafios_ativos = desafios_prontos_da_fase(fase)
         estados = calcular_estado_desafios(db, session["id_usuario"], desafios_ativos)
-        lista = [{"desafio": d, "estado": estados[d.id_desafio]} for d in desafios_ativos]
+        desafios_com_estado = [
+            {"desafio": desafio, "estado": estados[desafio.id_desafio]} for desafio in desafios_ativos
+        ]
     finally:
         db.close()
 
-    return render_template("jogo_fase.html", fase=fase, desafios=lista, tem_tutorial=tem_tutorial)
+    return render_template("jogo_fase.html", fase=fase, desafios=desafios_com_estado, tem_tutorial=tem_tutorial)
 
 
-# tutorial de calculo telas com foto que explicam a conta antes de uma fase
-# cada fase pode ter varias telas ou nenhuma o admin cadastra as fotos
-# so abre sozinho na primeira vez que o aluno entra na fase
-# depois o aluno pode rever pelo link na tela da fase
+# tutorial de calculo telas com foto que o admin cadastra e abrem sozinhas na primeira entrada na fase e depois pelo link da fase
 @app.route("/jogo/fase/<int:id_fase>/tutorial/<int:numero>")
 def tutorial_fase(id_fase, numero):
     if not session.get("id_usuario"):
@@ -995,14 +1009,14 @@ def tutorial_fase(id_fase, numero):
         if fase is None or not fase.ativo:
             return redirect(url_for("trilha"))
 
-        estado_da_fase = calcular_estado_fases(db, session["id_usuario"]).get(fase.id_fase)
-        if estado_da_fase and estado_da_fase["estado"] == "bloqueada":
+        if fase_esta_bloqueada(db, session["id_usuario"], fase):
             return render_template(
                 "bloqueado.html",
                 mensagem=f"Complete a fase anterior primeiro pra desbloquear '{fase.nome_fase}'.",
             )
 
-        telas_do_tutorial = sorted([t for t in fase.tutorial_telas if t.ativo], key=lambda t: t.ordem)
+        telas_ativas = [tela for tela in fase.tutorial_telas if tela.ativo]
+        telas_do_tutorial = sorted(telas_ativas, key=lambda tela: tela.ordem)
         total_de_telas = len(telas_do_tutorial)
 
         # sem tutorial ou numero fora do intervalo segue direto pra fase
@@ -1016,8 +1030,7 @@ def tutorial_fase(id_fase, numero):
         if numero > 1:
             url_da_tela_anterior = url_for("tutorial_fase", id_fase=fase.id_fase, numero=numero - 1)
 
-        # clicar na tela ou na seta da direita vai pra proxima
-        # na ultima tela conclui o tutorial e abre a fase
+        # clicar na tela ou na seta da direita vai pra proxima e na ultima conclui o tutorial e abre a fase
         if numero < total_de_telas:
             url_da_proxima_tela = url_for("tutorial_fase", id_fase=fase.id_fase, numero=numero + 1)
         else:
@@ -1081,41 +1094,42 @@ def tutorial_concluir(id_fase):
     return redirect(url_for("jogo_fase", id_fase=id_fase))
 
 
-def _perguntas_ordenadas(desafio):
-    return sorted([p for p in desafio.perguntas if p.ativo], key=lambda p: p.ordem)
+def perguntas_ativas_ordenadas(desafio):
+    perguntas_ativas = [pergunta for pergunta in desafio.perguntas if pergunta.ativo]
+    return sorted(perguntas_ativas, key=lambda pergunta: pergunta.ordem)
+
+
+def alternativas_ativas_ordenadas(pergunta):
+    alternativas_ativas = [alternativa for alternativa in pergunta.alternativas if alternativa.ativo]
+    return sorted(alternativas_ativas, key=lambda alternativa: alternativa.letra)
 
 
 def normalizar_resposta(texto):
-    # deixa a resposta num formato unico so pra comparar
-    # tira espacos e maiusculas e trata numeros no padrao brasileiro
-    # 1.000 vira 1000 e 2,5 vira 2.5 assim 1.000 e 1000 sao a mesma resposta
-    t = texto.strip().lower().replace(" ", "")
+    # deixa a resposta num formato unico so pra comparar sem espaco nem maiuscula e com numero brasileiro 1.000 igual a 1000 e 2,5 igual a 2.5
+    resposta = texto.strip().lower().replace(" ", "")
 
     # ponto seguido de exatamente 3 digitos e separador de milhar
-    if re.fullmatch(r"-?\d{1,3}(\.\d{3})+(,\d+)?", t):
-        t = t.replace(".", "")
+    if re.fullmatch(r"-?\d{1,3}(\.\d{3})+(,\d+)?", resposta):
+        resposta = resposta.replace(".", "")
 
     # virgula decimal vira ponto
-    if re.fullmatch(r"-?\d+,\d+", t):
-        t = t.replace(",", ".")
+    if re.fullmatch(r"-?\d+,\d+", resposta):
+        resposta = resposta.replace(",", ".")
 
     # 2.50 e 2.5 tambem sao a mesma coisa
-    if re.fullmatch(r"-?\d+\.\d+", t):
-        t = t.rstrip("0").rstrip(".")
+    if re.fullmatch(r"-?\d+\.\d+", resposta):
+        resposta = resposta.rstrip("0").rstrip(".")
 
-    return t
+    return resposta
 
 
 def atualizar_dias_seguidos(desempenho):
-    # conta o dia de hoje como estudado quando o aluno termina um desafio
-    # que ainda nao tinha concluido (repetir um ja concluido nao conta)
-    # ontem estudado soma 1 e um dia pulado volta pra 1
-    # terminar varios desafios no mesmo dia conta uma vez so
+    # dia estudado so conta ao concluir desafio novo e ontem soma 1 e dia pulado volta pra 1 e varios no mesmo dia contam uma vez
     hoje = date.today()
-    ultimo = desempenho.ultimo_dia_estudo
-    if ultimo == hoje:
+    ultimo_dia_de_estudo = desempenho.ultimo_dia_estudo
+    if ultimo_dia_de_estudo == hoje:
         return
-    if ultimo == hoje - timedelta(days=1):
+    if ultimo_dia_de_estudo == hoje - timedelta(days=1):
         desempenho.dias_seguidos += 1
     else:
         desempenho.dias_seguidos = 1
@@ -1124,8 +1138,7 @@ def atualizar_dias_seguidos(desempenho):
 
 
 def dias_seguidos_hoje(desempenho):
-    # o que mostrar na tela se o aluno nao estudou ontem nem hoje a
-    # sequencia ja quebrou mesmo que o banco ainda guarde o numero antigo
+    # se o aluno nao estudou ontem nem hoje a sequencia ja quebrou mesmo que o banco guarde o numero antigo
     if not desempenho or desempenho.ultimo_dia_estudo is None:
         return 0
     if desempenho.ultimo_dia_estudo < date.today() - timedelta(days=1):
@@ -1133,26 +1146,12 @@ def dias_seguidos_hoje(desempenho):
     return desempenho.dias_seguidos
 
 
-# dicas do log
-#
-# cada pergunta tem ate 3 niveis de dica
-#   nivel 1 so a ideia geral
-#   nivel 2 o primeiro passo
-#   nivel 3 o caminho completo sem fazer a conta
-# a dica explica COMO resolver e nunca entrega o resultado
-#
-# cada nivel liberado gasta uma dica e o aluno ganha dicas de 3 jeitos
-#   1 a dica gratis existe uma vez so em toda a vida do aluno
-#   2 um anuncio libera uma dica por desafio
-#   3 o aluno compra pacotes de dicas com os pontos da carteira
+# dicas do log 3 niveis por pergunta que ensinam o caminho sem dar o resultado e vem da dica gratis do anuncio ou de pacote comprado
 MAXIMO_DICAS = 3
 SEGUNDOS_DO_ANUNCIO = 5
 PACOTES_DE_DICAS = {3: 40, 5: 55}
 
-# a dica usa um modelo menor e mais barato que o do chat do log
-# o texto de cada dica fica guardado na tabela dica_pergunta e serve pra todos os alunos
-# por isso a openai e chamada uma vez so por pergunta e nivel
-# use um modelo sem raciocinio escondido senao o limite de tokens acaba antes do texto
+# a dica usa um modelo barato sem raciocinio escondido e o texto fica na tabela dica_pergunta pra openai ser chamada uma vez por pergunta e nivel
 MODELO_DAS_DICAS = os.getenv("OPENAI_MODEL_DICAS", "gpt-4.1-nano").strip()
 LIMITE_TOKENS_DA_DICA = 150
 
@@ -1179,9 +1178,7 @@ PADRAO_DE_NUMERO = r"\d+(?:[.,]\d+)*(?:/\d+)?"
 
 
 def dica_entregou_a_resposta(texto_da_dica, pergunta, alternativas):
-    # segunda barreira alem do prompt
-    # procura a resposta da pergunta escrita dentro da dica
-    textos_das_respostas = []
+    # segunda barreira alem do prompt procura a resposta da pergunta escrita dentro da dica
     if pergunta.tipo.value == "alternativa":
         letra_certa = pergunta.resposta_correta.strip().upper()
         # dizer que a letra tal esta certa e entregar a resposta
@@ -1208,32 +1205,28 @@ def dica_entregou_a_resposta(texto_da_dica, pergunta, alternativas):
     return False
 
 
-# quantas frases cada nivel de dica pode ter
-# o prompt ja pede isso mas o modelo pequeno as vezes escreve uma frase a mais
+# quantas frases cada nivel de dica pode ter porque o modelo pequeno as vezes escreve uma a mais
 FRASES_POR_NIVEL = {1: 1, 2: 2, 3: 3}
 
 
 def deixar_a_dica_curta(texto_da_dica, nivel):
     # tira rotulos como Dica 1 ou Nivel 2 no comeco
     texto = re.sub(r"^\s*(dica|n[ií]vel)\s*\d*\s*[:\-–]\s*", "", texto_da_dica, flags=re.IGNORECASE)
-    # junta as linhas e separa as frases
-    # so separa quando depois do ponto vem uma letra maiuscula assim 6.133 e R$ 8 continuam inteiros
+    # junta as linhas e separa as frases so quando depois do ponto vem maiuscula pra 6.133 e R$ 8 ficarem inteiros
     texto = " ".join(texto.split())
     frases = re.split(r"(?<=[.!?])\s+(?=[A-ZÁÉÍÓÚÂÊÔÃÕÇ])", texto)
     return " ".join(frases[: FRASES_POR_NIVEL.get(nivel, 3)]).strip()
 
 
 def escrever_dica_na_openai(pergunta, alternativas, nivel, lembrete_extra=""):
-    # a entrada e curta de proposito so o enunciado as alternativas e o nivel
-    # as alternativas ajudam o modelo a entender o assunto mas a certa nao vai marcada
+    # a entrada e curta de proposito com enunciado alternativas e nivel mas sem marcar a alternativa certa
     pedido = f"Nível da dica: {nivel}\nPergunta: {pergunta.enunciado}"
     if alternativas:
         pedido += "\nAlternativas: " + " | ".join(f"{alt.letra}) {alt.texto}" for alt in alternativas)
     if lembrete_extra:
         pedido += "\n" + lembrete_extra
 
-    # temperatura baixa deixa o texto mais firme e evita frases soltas em outro idioma
-    # so os modelos gpt-4 aceitam esse ajuste
+    # temperatura baixa deixa o texto mais firme e so os modelos gpt-4 aceitam esse ajuste
     ajustes_do_modelo = {"temperature": 0.3} if MODELO_DAS_DICAS.startswith("gpt-4") else {}
 
     cliente_openai = OpenAI(api_key=CHAVE_DA_OPENAI, timeout=SEGUNDOS_ESPERANDO_A_OPENAI, max_retries=1)
@@ -1250,8 +1243,7 @@ def escrever_dica_na_openai(pergunta, alternativas, nivel, lembrete_extra=""):
 
 
 def texto_da_dica(db, pergunta, nivel):
-    # devolve o texto da dica ou none quando nao deu pra escrever
-    # quem chama so cobra o aluno depois de receber um texto de verdade
+    # devolve o texto da dica ou none e quem chama so cobra o aluno depois de receber um texto de verdade
     guardada = (
         db.query(DicaPergunta)
         .filter(DicaPergunta.id_pergunta == pergunta.id_pergunta, DicaPergunta.nivel == nivel)
@@ -1263,7 +1255,7 @@ def texto_da_dica(db, pergunta, nivel):
     if not ia_esta_configurada():
         return None
 
-    alternativas = sorted([a for a in pergunta.alternativas if a.ativo], key=lambda a: a.letra)
+    alternativas = alternativas_ativas_ordenadas(pergunta)
     texto = ""
     lembrete_extra = ""
     # tenta duas vezes porque o modelo pequeno as vezes deixa escapar o resultado
@@ -1284,8 +1276,7 @@ def texto_da_dica(db, pergunta, nivel):
     if texto == "":
         return None
 
-    # guarda numa sessao so pra isso
-    # um commit na sessao de quem chamou expiraria a pergunta e a fase que a tela ainda vai usar
+    # guarda numa sessao so pra isso porque um commit na sessao de quem chamou expiraria a pergunta e a fase que a tela ainda usa
     db_do_cache = _Session()
     try:
         db_do_cache.add(DicaPergunta(id_pergunta=pergunta.id_pergunta, nivel=nivel, texto=texto))
@@ -1300,9 +1291,7 @@ def texto_da_dica(db, pergunta, nivel):
 
 @app.route("/jogo/desafio/<int:id_desafio>")
 def jogo_desafio(id_desafio):
-    # ponto de entrada de uma tentativa zera as respostas guardadas
-    # na sessao e manda pra 1a pergunta o cronometro de cada pergunta
-    # comeca quando ela abre em jogo_pergunta
+    # ponto de entrada de uma tentativa zera as respostas da sessao e manda pra 1a pergunta e o cronometro comeca em jogo_pergunta
     if not session.get("id_usuario"):
         return redirect(url_for("login"))
 
@@ -1317,16 +1306,15 @@ def jogo_desafio(id_desafio):
             return redirect(url_for("trilha"))
 
         fase = desafio.fase
-        estado_da_fase = calcular_estado_fases(db, session["id_usuario"]).get(fase.id_fase)
-        if estado_da_fase and estado_da_fase["estado"] == "bloqueada":
+        if fase_esta_bloqueada(db, session["id_usuario"], fase):
             # acesso direto por url a um desafio de uma fase ainda travada
             return render_template(
                 "bloqueado.html",
                 mensagem=f"Complete a fase anterior primeiro pra desbloquear '{fase.nome_fase}'.",
             )
 
-        irmaos = sorted([d for d in fase.desafios if desafio_esta_pronto_para_jogar(d)], key=lambda d: d.ordem)
-        estados = calcular_estado_desafios(db, session["id_usuario"], irmaos)
+        desafios_da_fase = desafios_prontos_da_fase(fase)
+        estados = calcular_estado_desafios(db, session["id_usuario"], desafios_da_fase)
         if estados.get(id_desafio) == "bloqueada":
             return render_template(
                 "bloqueado.html",
@@ -1342,9 +1330,7 @@ def jogo_desafio(id_desafio):
 
 @app.route("/jogo/desafio/<int:id_desafio>/pergunta/<int:numero>", methods=["GET", "POST"])
 def jogo_pergunta(id_desafio, numero):
-    # mostra uma pergunta por vez no post grava a resposta na sessao
-    # so grava de verdade no banco quando o desafio inteiro termina e
-    # mostra a animacao de acertou/errou antes de liberar a proxima
+    # mostra uma pergunta por vez e no post grava a resposta na sessao e so grava no banco quando o desafio termina
     if not session.get("id_usuario"):
         return redirect(url_for("login"))
 
@@ -1359,58 +1345,56 @@ def jogo_pergunta(id_desafio, numero):
             return redirect(url_for("trilha"))
 
         fase = desafio.fase
-        perguntas = _perguntas_ordenadas(desafio)
+        perguntas = perguntas_ativas_ordenadas(desafio)
         total = len(perguntas)
 
         if numero < 1 or numero > total:
             return redirect(url_for("jogo_finalizar_desafio", id_desafio=id_desafio))
 
         pergunta = perguntas[numero - 1]
-        alternativas = sorted([a for a in pergunta.alternativas if a.ativo], key=lambda a: a.letra)
+        alternativas = alternativas_ativas_ordenadas(pergunta)
 
-        # o cronometro da pergunta comeca na primeira vez que ela abre
-        # recarregar a pagina continua de onde estava e nao zera
+        # o cronometro da pergunta comeca na primeira vez que ela abre e recarregar a pagina nao zera
         agora = time.time()
         if estado_tentativa.get("pergunta_atual") != numero:
             estado_tentativa["pergunta_atual"] = numero
             estado_tentativa["inicio_pergunta"] = agora
             session[f"tentativa_{id_desafio}"] = estado_tentativa
-            session.modified = True
         segundos_decorridos = int(agora - estado_tentativa["inicio_pergunta"])
 
         resultado = None
         proximo_numero = None
 
         if request.method == "POST":
-            dada = request.form.get("resposta", "").strip()
+            resposta_dada = request.form.get("resposta", "").strip()
             if pergunta.tipo.value == "alternativa":
-                certa = dada.upper() == pergunta.resposta_correta.strip().upper()
+                acertou = resposta_dada.upper() == pergunta.resposta_correta.strip().upper()
             else:
-                certa = normalizar_resposta(dada) == normalizar_resposta(pergunta.resposta_correta)
+                acertou = normalizar_resposta(resposta_dada) == normalizar_resposta(pergunta.resposta_correta)
 
             # reenviar o formulario nao muda o tempo ja registrado da pergunta
-            anterior = estado_tentativa["respostas"].get(str(pergunta.id_pergunta))
-            tempo_pergunta = anterior.get("tempo", segundos_decorridos) if anterior else segundos_decorridos
+            resposta_anterior = estado_tentativa["respostas"].get(str(pergunta.id_pergunta))
+            if resposta_anterior:
+                tempo_pergunta = resposta_anterior.get("tempo", segundos_decorridos)
+            else:
+                tempo_pergunta = segundos_decorridos
 
             estado_tentativa["respostas"][str(pergunta.id_pergunta)] = {
-                "dada": dada,
-                "certa": certa,
+                "dada": resposta_dada,
+                "certa": acertou,
                 "tempo": tempo_pergunta,
             }
             session[f"tentativa_{id_desafio}"] = estado_tentativa
-            session.modified = True
 
-            # a tela so confirma o que o aluno respondeu
-            # o acerto so aparece no resultado do desafio
+            # a tela so confirma o que o aluno respondeu e o acerto so aparece no resultado do desafio
             texto_escolhido = ""
-            for alt in alternativas:
-                if alt.letra.upper() == dada.upper():
-                    texto_escolhido = alt.texto
-            resultado = {"resposta_dada": dada, "texto_escolhido": texto_escolhido}
+            for alternativa in alternativas:
+                if alternativa.letra.upper() == resposta_dada.upper():
+                    texto_escolhido = alternativa.texto
+            resultado = {"resposta_dada": resposta_dada, "texto_escolhido": texto_escolhido}
             proximo_numero = numero + 1 if numero < total else None
 
-        # dicas ja liberadas nesta pergunta (so existem durante a tentativa)
-        # o texto vem da tabela dica_pergunta entao recarregar a tela nao chama a openai de novo
+        # dicas ja liberadas nesta pergunta e o texto vem da tabela dica_pergunta entao recarregar nao chama a openai de novo
         dica_nivel = estado_tentativa.get("dicas", {}).get(str(pergunta.id_pergunta), 0)
         textos_dicas = []
         if resultado is None:
@@ -1420,19 +1404,11 @@ def jogo_pergunta(id_desafio, numero):
                     texto or "O Log não conseguiu mostrar esta dica agora. Recarregue a página para tentar de novo."
                 )
 
-        desempenho = db.query(Desempenho).filter(Desempenho.id_usuario == session["id_usuario"]).first()
+        desempenho = buscar_desempenho_do_usuario(db, session["id_usuario"])
         pontos_do_aluno = desempenho.pontos_carteira if desempenho else 0
         dica_gratis_disponivel = bool(desempenho) and not desempenho.dica_gratis_usada
         dicas_extras = desempenho.dicas_extras if desempenho else 0
-        anuncio_disponivel = (
-            db.query(AnuncioDicaUsuario)
-            .filter(
-                AnuncioDicaUsuario.id_usuario == session["id_usuario"],
-                AnuncioDicaUsuario.id_desafio == id_desafio,
-            )
-            .first()
-            is None
-        )
+        anuncio_disponivel = not aluno_ja_usou_o_anuncio(db, session["id_usuario"], id_desafio)
     finally:
         db.close()
 
@@ -1462,8 +1438,7 @@ def jogo_pergunta(id_desafio, numero):
 
 @app.route("/jogo/desafio/<int:id_desafio>/pergunta/<int:numero>/anuncio")
 def jogo_anuncio(id_desafio, numero):
-    # anuncio simulado de mentira pra mostrar o fluxo da dica liberada por anuncio
-    # guarda a hora que abriu pra rota da dica conferir que o aluno esperou o tempo todo
+    # anuncio simulado que guarda a hora que abriu pra rota da dica conferir que o aluno esperou o tempo todo
     if not session.get("id_usuario"):
         return redirect(url_for("login"))
     if not session.get(f"tentativa_{id_desafio}"):
@@ -1471,15 +1446,7 @@ def jogo_anuncio(id_desafio, numero):
 
     db = _Session()
     try:
-        ja_usou_o_anuncio = (
-            db.query(AnuncioDicaUsuario)
-            .filter(
-                AnuncioDicaUsuario.id_usuario == session["id_usuario"],
-                AnuncioDicaUsuario.id_desafio == id_desafio,
-            )
-            .first()
-            is not None
-        )
+        ja_usou_o_anuncio = aluno_ja_usou_o_anuncio(db, session["id_usuario"], id_desafio)
     finally:
         db.close()
 
@@ -1495,11 +1462,7 @@ def jogo_anuncio(id_desafio, numero):
 
 @app.route("/jogo/desafio/<int:id_desafio>/pergunta/<int:numero>/dica", methods=["POST"])
 def jogo_dica(id_desafio, numero):
-    # libera o proximo nivel de dica da pergunta
-    # forma gratis usa a dica unica da vida do aluno
-    # forma anuncio usa o anuncio do desafio e exige ter esperado o tempo todo
-    # forma comprada gasta uma das dicas compradas com pontos
-    # o aluno so e cobrado depois que o log escreveu a dica de verdade
+    # libera o proximo nivel de dica gratis anuncio ou comprada e o aluno so e cobrado depois que o log escreveu a dica
     if not session.get("id_usuario"):
         return redirect(url_for("login"))
 
@@ -1515,38 +1478,30 @@ def jogo_dica(id_desafio, numero):
         if desafio is None or not desafio.ativo:
             return redirect(url_for("trilha"))
 
-        perguntas = _perguntas_ordenadas(desafio)
+        perguntas = perguntas_ativas_ordenadas(desafio)
         if numero < 1 or numero > len(perguntas):
             return redirect(url_for("trilha"))
         pergunta = perguntas[numero - 1]
-        chave = str(pergunta.id_pergunta)
+        id_da_pergunta_como_texto = str(pergunta.id_pergunta)
 
         # depois de responder nao faz sentido pedir dica
-        nivel = estado_tentativa.get("dicas", {}).get(chave, 0)
-        if chave in estado_tentativa["respostas"] or nivel >= MAXIMO_DICAS:
+        nivel = estado_tentativa.get("dicas", {}).get(id_da_pergunta_como_texto, 0)
+        if id_da_pergunta_como_texto in estado_tentativa["respostas"] or nivel >= MAXIMO_DICAS:
             return voltar
 
-        desempenho = db.query(Desempenho).filter(Desempenho.id_usuario == session["id_usuario"]).first()
+        desempenho = buscar_desempenho_do_usuario(db, session["id_usuario"])
         if desempenho is None:
             return voltar
 
         # primeiro confere se o aluno tem direito a essa forma de dica sem cobrar nada ainda
-        forma = request.form.get("forma", "")
+        forma_de_liberar = request.form.get("forma", "")
         segundos_no_anuncio = 0
-        if forma == "gratis":
+        if forma_de_liberar == "gratis":
             if desempenho.dica_gratis_usada:
                 flash("Você já usou a sua dica grátis. Ela existe uma vez só.")
                 return voltar
-        elif forma == "anuncio":
-            ja_usou_o_anuncio = (
-                db.query(AnuncioDicaUsuario)
-                .filter(
-                    AnuncioDicaUsuario.id_usuario == session["id_usuario"],
-                    AnuncioDicaUsuario.id_desafio == id_desafio,
-                )
-                .first()
-                is not None
-            )
+        elif forma_de_liberar == "anuncio":
+            ja_usou_o_anuncio = aluno_ja_usou_o_anuncio(db, session["id_usuario"], id_desafio)
             if ja_usou_o_anuncio:
                 flash("Você já usou o anúncio deste desafio.")
                 return voltar
@@ -1555,7 +1510,7 @@ def jogo_dica(id_desafio, numero):
             if segundos_no_anuncio < SEGUNDOS_DO_ANUNCIO:
                 flash("Assista ao anúncio até o fim para liberar a dica.")
                 return voltar
-        elif forma == "comprada":
+        elif forma_de_liberar == "comprada":
             if desempenho.dicas_extras <= 0:
                 flash("Você não tem dicas compradas. Compre um pacote com os pontos da carteira.")
                 return voltar
@@ -1568,9 +1523,9 @@ def jogo_dica(id_desafio, numero):
             flash("O Log não conseguiu escrever a dica agora. Nada foi cobrado. Tente de novo daqui a pouco.")
             return voltar
 
-        if forma == "gratis":
+        if forma_de_liberar == "gratis":
             desempenho.dica_gratis_usada = True
-        elif forma == "anuncio":
+        elif forma_de_liberar == "anuncio":
             db.add(AnuncioDicaUsuario(id_usuario=session["id_usuario"], id_desafio=id_desafio, data_uso=datetime.now()))
             session.pop("anuncio_inicio", None)
             # o tempo vendo o anuncio nao conta no tempo da pergunta
@@ -1579,9 +1534,8 @@ def jogo_dica(id_desafio, numero):
             desempenho.dicas_extras -= 1
         db.commit()
 
-        estado_tentativa.setdefault("dicas", {})[chave] = nivel + 1
+        estado_tentativa.setdefault("dicas", {})[id_da_pergunta_como_texto] = nivel + 1
         session[f"tentativa_{id_desafio}"] = estado_tentativa
-        session.modified = True
     finally:
         db.close()
 
@@ -1590,8 +1544,7 @@ def jogo_dica(id_desafio, numero):
 
 @app.route("/jogo/dicas/comprar", methods=["POST"])
 def jogo_dicas_comprar():
-    # troca pontos da carteira por dicas
-    # so a carteira diminui o total de pontos e o ranking continuam iguais
+    # troca pontos da carteira por dicas sem mexer no total de pontos nem no ranking
     if not session.get("id_usuario"):
         return redirect(url_for("login"))
 
@@ -1610,16 +1563,8 @@ def jogo_dicas_comprar():
     custo_em_pontos = PACOTES_DE_DICAS[quantidade_de_dicas]
     db = _Session()
     try:
-        desempenho = db.query(Desempenho).filter(Desempenho.id_usuario == session["id_usuario"]).first()
-        pontos_na_carteira = desempenho.pontos_carteira if desempenho else 0
-
-        if desempenho is None or pontos_na_carteira < custo_em_pontos:
-            flash(
-                f"Você precisa de {custo_em_pontos} pontos na carteira para esse pacote. "
-                f"Você tem {pontos_na_carteira}."
-            )
-        else:
-            desempenho.pontos_carteira -= custo_em_pontos
+        desempenho = buscar_desempenho_do_usuario(db, session["id_usuario"])
+        if cobrar_pacote_da_carteira(desempenho, custo_em_pontos):
             desempenho.dicas_extras += quantidade_de_dicas
             db.commit()
             flash(f"Pronto! Você comprou {quantidade_de_dicas} dicas por {custo_em_pontos} pontos.", "sucesso")
@@ -1631,10 +1576,7 @@ def jogo_dicas_comprar():
 
 @app.route("/jogo/desafio/<int:id_desafio>/finalizar")
 def jogo_finalizar_desafio(id_desafio):
-    # fecha a tentativa grava tentativa_desafio + resposta_usuario
-    # atualiza desempenho e recompensas e decide se mostra a tela de
-    # resultado do desafio ou a de fase concluida quando este era o
-    # ultimo desafio pendente da fase
+    # fecha a tentativa grava tentativa_desafio e resposta_usuario atualiza desempenho e recompensas e mostra o resultado ou a fase concluida
     if not session.get("id_usuario"):
         return redirect(url_for("login"))
 
@@ -1647,26 +1589,25 @@ def jogo_finalizar_desafio(id_desafio):
     try:
         desafio = db.get(Desafio, id_desafio)
         fase = desafio.fase
-        perguntas = _perguntas_ordenadas(desafio)
+        perguntas = perguntas_ativas_ordenadas(desafio)
 
         respostas_guardadas = estado_tentativa["respostas"]
 
-        # o tempo do desafio e a soma do tempo de cada pergunta
-        # pergunta nao respondida conta zero
+        # o tempo do desafio e a soma do tempo de cada pergunta e pergunta sem resposta conta zero
         acertos = 0
         tempo_gasto = 0
         tempos_das_perguntas = []
         respostas_para_salvar = []
         for pergunta in perguntas:
-            info = respostas_guardadas.get(str(pergunta.id_pergunta))
-            dada = info["dada"] if info else ""
-            certa = info["certa"] if info else False
-            tempo_pergunta = info.get("tempo", 0) if info else 0
-            if certa:
+            resposta_guardada = respostas_guardadas.get(str(pergunta.id_pergunta))
+            resposta_dada = resposta_guardada["dada"] if resposta_guardada else ""
+            acertou = resposta_guardada["certa"] if resposta_guardada else False
+            tempo_pergunta = resposta_guardada.get("tempo", 0) if resposta_guardada else 0
+            if acertou:
                 acertos += 1
             tempo_gasto += tempo_pergunta
             tempos_das_perguntas.append(tempo_pergunta)
-            respostas_para_salvar.append((pergunta, dada, certa))
+            respostas_para_salvar.append((pergunta, resposta_dada, acertou))
 
         passou = bool(perguntas) and acertos == len(perguntas)
 
@@ -1680,23 +1621,19 @@ def jogo_finalizar_desafio(id_desafio):
             db.add(desafio_usuario)
             db.flush()
 
-        # pra saber se a fase inteira acabou de ser concluida com esta
-        # tentativa olha o progresso dos irmaos antes de gravar esta
-        irmaos = sorted([d for d in fase.desafios if desafio_esta_pronto_para_jogar(d)], key=lambda d: d.ordem)
-        ids_irmaos = [d.id_desafio for d in irmaos]
-        concluidos_antes = {
-            du.id_desafio
-            for du in db.query(DesafioUsuario).filter(
+        # pra saber se a fase acabou de ser concluida olha o progresso dos outros desafios da fase antes de gravar esta tentativa
+        ids_desafios_da_fase = [desafio_da_fase.id_desafio for desafio_da_fase in desafios_prontos_da_fase(fase)]
+        ids_concluidos_antes = {
+            progresso.id_desafio
+            for progresso in db.query(DesafioUsuario).filter(
                 DesafioUsuario.id_usuario == id_usuario,
-                DesafioUsuario.id_desafio.in_(ids_irmaos),
+                DesafioUsuario.id_desafio.in_(ids_desafios_da_fase),
                 DesafioUsuario.concluido_primeira_vez == True,
             )
         }
-        faltava_so_este = concluidos_antes == (set(ids_irmaos) - {id_desafio})
+        faltava_so_este = ids_concluidos_antes == (set(ids_desafios_da_fase) - {id_desafio})
 
-        # sequencia cada pergunta conta uma unica vez na primeira vez que o
-        # aluno acerta ela errar nao zera e repetir desafio concluido nao soma
-        # entao olha as respostas certas antigas antes de gravar as desta tentativa
+        # cada pergunta soma na sequencia so na primeira vez que o aluno acerta ela e errar nao zera e repetir desafio concluido nao soma
         ja_acertou_antes = {
             id_pergunta
             for (id_pergunta,) in db.query(RespostaUsuario.id_pergunta)
@@ -1704,12 +1641,14 @@ def jogo_finalizar_desafio(id_desafio):
             .join(DesafioUsuario, TentativaDesafio.id_desafio_usuario == DesafioUsuario.id_desafio_usuario)
             .filter(
                 DesafioUsuario.id_usuario == id_usuario,
-                RespostaUsuario.id_pergunta.in_([p.id_pergunta for p in perguntas]),
+                RespostaUsuario.id_pergunta.in_([pergunta.id_pergunta for pergunta in perguntas]),
                 RespostaUsuario.correta == True,
             )
         }
         acertos_novos = sum(
-            1 for pergunta, _, certa in respostas_para_salvar if certa and pergunta.id_pergunta not in ja_acertou_antes
+            1
+            for pergunta, _, acertou in respostas_para_salvar
+            if acertou and pergunta.id_pergunta not in ja_acertou_antes
         )
 
         # repetir um desafio ja concluido nao gera pontos nem conta pros dias seguidos
@@ -1732,21 +1671,20 @@ def jogo_finalizar_desafio(id_desafio):
         db.add(tentativa)
         db.flush()
 
-        for pergunta, dada, certa in respostas_para_salvar:
+        for pergunta, resposta_dada, acertou in respostas_para_salvar:
             db.add(
                 RespostaUsuario(
                     id_tentativa=tentativa.id_tentativa,
                     id_pergunta=pergunta.id_pergunta,
-                    resposta_dada=dada or "-",
-                    correta=certa,
+                    resposta_dada=resposta_dada or "-",
+                    correta=acertou,
                 )
             )
 
-        desempenho = db.query(Desempenho).filter(Desempenho.id_usuario == id_usuario).first()
+        desempenho = buscar_desempenho_do_usuario(db, id_usuario)
         conquistas_novas = []
         if desempenho:
-            # soma os segundos exatos e so depois divide por 60
-            # o jeito antigo somava minutos inteiros por tentativa e perdia os segundos de cada desafio curto
+            # soma os segundos exatos e so depois divide por 60 senao cada desafio curto perdia os segundos
             desempenho.segundos_totais += max(tempo_gasto, 0)
             desempenho.minutos_totais = desempenho.segundos_totais // 60
             desempenho.sequencia_atual += acertos_novos
@@ -1763,13 +1701,13 @@ def jogo_finalizar_desafio(id_desafio):
         db.commit()
 
         if fase_recem_concluida:
-            todos_du = (
+            progresso_nos_desafios_da_fase = (
                 db.query(DesafioUsuario)
-                .filter(DesafioUsuario.id_usuario == id_usuario, DesafioUsuario.id_desafio.in_(ids_irmaos))
+                .filter(DesafioUsuario.id_usuario == id_usuario, DesafioUsuario.id_desafio.in_(ids_desafios_da_fase))
                 .all()
             )
-            tempo_total_fase = sum(du.melhor_tempo_seg or 0 for du in todos_du)
-            pontos_total_fase = sum(du.pontos_obtidos for du in todos_du)
+            tempo_total_fase = sum(progresso.melhor_tempo_seg or 0 for progresso in progresso_nos_desafios_da_fase)
+            pontos_total_fase = sum(progresso.pontos_obtidos for progresso in progresso_nos_desafios_da_fase)
             return render_template(
                 "jogo_fase_concluida.html",
                 fase=fase,
@@ -1808,25 +1746,23 @@ def recompensas():
     db = _Session()
     try:
         usuario = db.get(Usuario, id_usuario)
-        desempenho = db.query(Desempenho).filter(Desempenho.id_usuario == id_usuario).first()
-        todas = db.query(Recompensa).filter(Recompensa.ativo == True).order_by(Recompensa.valor_necessario).all()
-        conquistadas_ids = {
-            ru.id_recompensa
-            for ru in db.query(RecompensaUsuario).filter(RecompensaUsuario.id_usuario == id_usuario)
+        desempenho = buscar_desempenho_do_usuario(db, id_usuario)
+        recompensas_ativas = (
+            db.query(Recompensa).filter(Recompensa.ativo == True).order_by(Recompensa.valor_necessario).all()
+        )
+        ids_das_recompensas_conquistadas = {
+            recompensa_do_aluno.id_recompensa
+            for recompensa_do_aluno in db.query(RecompensaUsuario).filter(RecompensaUsuario.id_usuario == id_usuario)
         }
-        valores_atuais = {
-            "pontos": desempenho.total_pontos if desempenho else 0,
-            "sequencia": desempenho.sequencia_maxima if desempenho else 0,
-            "horas": (desempenho.minutos_totais // 60) if desempenho else 0,
-        }
+        valores_atuais = medir_progresso_do_aluno_para_recompensas(desempenho)
 
         itens = [
             {
-                "recompensa": r,
-                "conquistada": r.id_recompensa in conquistadas_ids,
-                "progresso_atual": valores_atuais.get(r.tipo.value, 0),
+                "recompensa": recompensa,
+                "conquistada": recompensa.id_recompensa in ids_das_recompensas_conquistadas,
+                "progresso_atual": valores_atuais.get(recompensa.tipo.value, 0),
             }
-            for r in todas
+            for recompensa in recompensas_ativas
         ]
     finally:
         db.close()
@@ -1848,8 +1784,11 @@ def perfil():
         if request.method == "POST":
             novo_nome = request.form.get("nome", "").strip()
             novo_subnick = request.form.get("subnick", "").strip()
-            if len(novo_nome) > TAMANHO_MAXIMO_DO_NOME_E_DO_EMAIL or len(novo_subnick) > 50:
-                flash("O nome pode ter até 150 caracteres e o apelido até 50.")
+            if len(novo_nome) > TAMANHO_MAXIMO_DO_NOME_E_DO_EMAIL or len(novo_subnick) > TAMANHO_MAXIMO_DO_APELIDO:
+                flash(
+                    f"O nome pode ter até {TAMANHO_MAXIMO_DO_NOME_E_DO_EMAIL} caracteres "
+                    f"e o apelido até {TAMANHO_MAXIMO_DO_APELIDO}."
+                )
             else:
                 if novo_nome:
                     usuario.nome = novo_nome
@@ -1858,11 +1797,9 @@ def perfil():
                 db.commit()
                 flash("Perfil atualizado.", "sucesso")
 
-        desempenho = db.query(Desempenho).filter(Desempenho.id_usuario == id_usuario).first()
+        desempenho = buscar_desempenho_do_usuario(db, id_usuario)
 
-        # o commit acima expira os atributos do usuario renderiza o
-        # template aqui dentro com a sessao ainda aberta pra poder
-        # ler usuario.nome/subnick de novo sem dar detachedinstanceerror
+        # o commit acima expira os atributos do usuario entao renderiza aqui dentro com a sessao aberta pra evitar detachedinstanceerror
         return render_template(
             "perfil.html", usuario=usuario, desempenho=desempenho, dias_seguidos=dias_seguidos_hoje(desempenho)
         )
@@ -1870,10 +1807,7 @@ def perfil():
         db.close()
 
 
-# feedback do aluno sobre a acessibilidade do app
-# cada aluno envia um por mes
-# o texto e salvo no banco primeiro e depois vai por e-mail pro EMAIL_REMETENTE do .env
-# se o e-mail falhar o aluno nao percebe e a equipe ainda le tudo no painel admin em Feedbacks
+# feedback de acessibilidade um por mes salvo no banco primeiro e depois enviado por e-mail pro EMAIL_REMETENTE e a equipe le tudo no painel admin
 CATEGORIAS_DE_FEEDBACK = [
     ("letra", "O tamanho ou o tipo da letra"),
     ("cores", "As cores ou o contraste"),
@@ -1947,7 +1881,7 @@ def feedback():
             categoria_escolhida = request.form.get("categoria", "")
             texto_digitado = request.form.get("texto", "").strip()
 
-            if nota_escolhida not in [str(nota) for nota, rotulo in NOTAS_DE_FEEDBACK]:
+            if nota_escolhida not in [str(nota) for nota, _ in NOTAS_DE_FEEDBACK]:
                 flash("Escolha uma nota de 1 a 5.")
             elif categoria_escolhida not in dict(CATEGORIAS_DE_FEEDBACK):
                 flash("Escolha o que mais atrapalhou.")
@@ -1991,8 +1925,7 @@ def feedback():
         db.close()
 
 
-# configuracoes de acessibilidade modo sem pressao tema e tamanho da fonte
-# ficam na tabela usuario e tambem na sessao pro base.html aplicar na hora
+# configuracoes de acessibilidade modo sem pressao tema e tamanho da fonte ficam na tabela usuario e na sessao
 TEMAS = [("padrao", "Padrão"), ("contraste", "Alto contraste")]
 TAMANHOS_FONTE = [("normal", "Normal"), ("grande", "Grande"), ("muito_grande", "Muito grande")]
 
@@ -2017,9 +1950,7 @@ def configuracoes():
             usuario.modo_sem_pressao = request.form.get("modo_sem_pressao") == "on"
             db.commit()
 
-            session["tema"] = usuario.tema
-            session["tamanho_fonte"] = usuario.tamanho_fonte
-            session["sem_pressao"] = usuario.modo_sem_pressao
+            guardar_preferencias_na_sessao(usuario)
             flash("Configurações salvas.", "sucesso")
 
         return render_template("configuracoes.html", usuario=usuario, temas=TEMAS, tamanhos_fonte=TAMANHOS_FONTE)
@@ -2027,32 +1958,11 @@ def configuracoes():
         db.close()
 
 
-# log ia o assistente log responde so perguntas de matematica
-#
-# fluxo de uma pergunta
-# 1 o aluno digita a pergunta e envia o formulario
-# o javascript manda a pergunta pra rota ia_perguntar sem recarregar a tela
-# enquanto isso a tela mostra a pergunta e tres pontinhos no balao do log
-# 2 a rota ia_perguntar passa por varias barreiras em ordem
-# texto vazio texto grande ia sem chave castigo limite por minuto limite do dia
-# 3 se passou por todas chamamos a openai uma unica vez
-# 4 o proprio modelo diz se a pergunta e de matematica
-# quando nao for ele responde apenas com a palavra fora_do_tema
-# 5 gravamos a pergunta e a resposta na tabela log_ia
-# os limites e o castigo sao calculados lendo essa mesma tabela
-# 6 a rota devolve o trecho de html da conversa nova pro javascript colocar na tela
-#
-# o aluno tem 10 perguntas gratis por dia
-# depois disso ele compra pacotes com pontos da carteira
-# as perguntas compradas ficam em desempenho.perguntas_extras_ia e nao vencem
-#
-# a chave e o modelo ficam no arquivo .env
-# se mudar o .env precisa parar e abrir o flask de novo
+# log ia responde so matematica com 10 perguntas gratis por dia e chave e modelo no .env que pedem reiniciar o flask ao mudar
 CHAVE_DA_OPENAI = os.getenv("OPENAI_API_KEY", "").strip()
 MODELO_DA_OPENAI = os.getenv("OPENAI_MODEL", "gpt-4o-mini").strip()
 
 # limites de tamanho quanto menor a pergunta e a resposta menos tokens gastamos
-# a resposta didatica em markdown e maior que a antiga por isso o limite subiu de 700 pra 1000
 LIMITE_CARACTERES_DA_PERGUNTA = 300
 LIMITE_TOKENS_DA_RESPOSTA = 1000
 SEGUNDOS_ESPERANDO_A_OPENAI = 30
@@ -2071,8 +1981,7 @@ CONVERSAS_POR_PAGINA = 10
 QUANTAS_FORA_DO_TEMA_PARA_CASTIGO = 3
 MINUTOS_DE_CASTIGO = 10
 
-# memoria do log as ultimas conversas de matematica seguem junto da pergunta nova
-# conversa mais velha que o tempo abaixo ja nao ajuda a entender a pergunta e so gastaria token
+# memoria do log as ultimas conversas de matematica seguem junto da pergunta nova mas as velhas so gastariam token
 QUANTAS_CONVERSAS_DE_CONTEXTO = 5
 MINUTOS_DE_MEMORIA_DO_LOG = 60
 CARACTERES_DA_RESPOSTA_NO_CONTEXTO = 250
@@ -2085,10 +1994,7 @@ MENSAGEM_FORA_DO_TEMA = (
     "por exemplo fração, equação ou multiplicação."
 )
 
-# texto que explica pro modelo quem ele e e como deve responder
-# conversa leve como oi e obrigado NAO e fora do tema o log responde com educacao
-# so pedido de ajuda com outro assunto recebe a palavra fora_do_tema
-# o app troca essa palavra pela mensagem educada de mensagem_fora_do_tema e conta pro castigo
+# instrucoes do modelo e so assunto fora da matematica recebe a palavra fora_do_tema que o app troca pela mensagem educada
 INSTRUCOES_DO_LOG = (
     "Você é o Log, o assistente de matemática do aplicativo LOG+, "
     "feito para estudantes com TDAH. Siga sempre estas regras. "
@@ -2151,9 +2057,7 @@ INSTRUCOES_DO_LOG = (
 
 
 def limpar_latex_simples(texto_com_latex):
-    # a instrucao do log proibe latex mas o modelo as vezes escreve mesmo assim
-    # troca os casos mais comuns por texto simples pra nao sobrar barra e parentese solto na tela
-    # tira os delimitadores junto com o espaco de dentro assim nao sobra espaco antes do ponto final
+    # o modelo as vezes escreve latex mesmo proibido entao troca os casos comuns por texto simples pra nao sobrar barra solta na tela
     texto = re.sub(r"\\[(\[]\s*", "", texto_com_latex)
     texto = re.sub(r"\s*\\[)\]]", "", texto)
     texto = re.sub(r"\\(left|right)", "", texto)
@@ -2183,11 +2087,7 @@ def limpar_latex_simples(texto_com_latex):
 
 
 def markdown_do_log(texto_em_markdown):
-    # converte o markdown que o log escreve em html
-    # cobre titulos paragrafos listas (inclusive lista dentro de lista) tabelas
-    # bloco de codigo citacao negrito italico codigo e linha separadora
-    # o texto e escapado antes de tudo entao nenhum html vindo da ia ou do aluno roda na tela
-    # links viram so o texto do link a tela do aluno nao leva pra fora do app
+    # converte o markdown do log em html escapando o texto antes pra nenhum html da ia ou do aluno rodar e links viram so o texto
     linhas = limpar_latex_simples(texto_em_markdown or "").replace("\r\n", "\n").replace("\t", "    ").split("\n")
 
     blocos_de_html = []
@@ -2356,9 +2256,7 @@ def ia_esta_configurada():
 
 
 def montar_contexto_do_log(db, id_usuario):
-    # devolve um texto curto com as ultimas conversas de matematica do aluno
-    # so entram as conversas validas (fora do tema ficam de fora) e so as de pouco tempo atras
-    # a resposta antiga entra sem markdown e cortada pra gastar poucos tokens
+    # ultimas conversas de matematica do aluno de pouco tempo atras sem markdown e cortadas pra gastar poucos tokens
     ha_pouco_tempo = datetime.now() - timedelta(minutes=MINUTOS_DE_MEMORIA_DO_LOG)
     ultimas_conversas = (
         db.query(LogIA)
@@ -2387,11 +2285,7 @@ def montar_contexto_do_log(db, id_usuario):
 
 
 def perguntar_ao_log_na_openai(texto_da_pergunta, contexto_das_conversas=""):
-    # unica funcao que fala com a internet devolve o texto da resposta
-    # se der qualquer problema chave errada sem internet limite da conta
-    # a openai levanta um erro e quem chamou esta funcao trata
-    # o contexto vai dentro da mensagem do aluno e nao como mensagens separadas
-    # assim o modelo nao copia o jeito curto das respostas cortadas
+    # unica funcao que fala com a openai e levanta erro se algo falhar e o contexto vai dentro da mensagem do aluno e nao separado
     if contexto_das_conversas:
         mensagem_do_aluno = (
             "Conversas recentes do aluno, só para você entender o contexto:\n"
@@ -2423,8 +2317,7 @@ def resposta_indica_fora_do_tema(texto_da_resposta):
 
 
 def calcular_liberacao_do_castigo(db, id_usuario):
-    # devolve a hora em que o aluno volta a poder perguntar
-    # ou none quando ele nao esta de castigo
+    # devolve a hora em que o aluno volta a poder perguntar ou none quando nao esta de castigo
     ultimas_perguntas = (
         db.query(LogIA)
         .filter(LogIA.id_usuario == id_usuario)
@@ -2442,8 +2335,7 @@ def calcular_liberacao_do_castigo(db, id_usuario):
         if pergunta.sobre_matematica:
             return None
 
-    # as 3 so contam como seguidas se cada uma veio a menos de 10 minutos da anterior
-    # sem isso o castigo acabava e a primeira pergunta fora do tema ja travava de novo
+    # as 3 so contam como seguidas se cada uma veio a menos de 10 minutos da anterior senao o castigo travaria de novo na primeira
     tempo_maximo_entre_perguntas = timedelta(minutes=MINUTOS_DE_CASTIGO)
     for posicao in range(len(ultimas_perguntas) - 1):
         pergunta_mais_nova = ultimas_perguntas[posicao]
@@ -2477,9 +2369,8 @@ def contar_perguntas_de_hoje(db, id_usuario):
 
 
 def montar_status_do_chat(db, id_usuario):
-    # tudo que a tela precisa saber pra mostrar quantas perguntas ainda restam
-    # a tela usa na hora de abrir e o javascript usa depois de cada pergunta
-    desempenho = db.query(Desempenho).filter(Desempenho.id_usuario == id_usuario).first()
+    # tudo que a tela precisa pra mostrar quantas perguntas restam usado ao abrir a tela e depois de cada pergunta
+    desempenho = buscar_desempenho_do_usuario(db, id_usuario)
     perguntas_extras = desempenho.perguntas_extras_ia if desempenho else 0
     pontos_na_carteira = desempenho.pontos_carteira if desempenho else 0
 
@@ -2528,9 +2419,7 @@ def ia_chat():
 
 @app.route("/ia/historico")
 def ia_historico():
-    # devolve 10 conversas por vez das mais novas pras mais antigas
-    # sem o parametro antes vem as 10 mais novas
-    # com antes=id vem as 10 que aparecem logo acima dessa conversa
+    # devolve 10 conversas por vez das mais novas pras mais antigas e com antes=id vem as 10 logo acima dessa conversa
     if not session.get("id_usuario"):
         return jsonify({"ok": False, "erro": "Entre de novo para continuar."}), 401
 
@@ -2575,8 +2464,7 @@ def ia_historico():
 
 @app.route("/ia/perguntar", methods=["POST"])
 def ia_perguntar():
-    # recebe a pergunta em json e devolve o html da conversa nova
-    # quando alguma barreira barra a pergunta nada e gravado e o aluno nao perde limite
+    # recebe a pergunta em json e devolve o html da conversa nova e se uma barreira barrar nada e gravado e o aluno nao perde limite
     if not session.get("id_usuario"):
         return jsonify({"ok": False, "erro": "Entre de novo para continuar."}), 401
 
@@ -2586,7 +2474,7 @@ def ia_perguntar():
 
     db = _Session()
     try:
-        desempenho = db.query(Desempenho).filter(Desempenho.id_usuario == id_usuario).first()
+        desempenho = buscar_desempenho_do_usuario(db, id_usuario)
         perguntas_extras = desempenho.perguntas_extras_ia if desempenho else 0
         perguntas_feitas_hoje = contar_perguntas_de_hoje(db, id_usuario)
         liberado_em_antes_da_pergunta = calcular_liberacao_do_castigo(db, id_usuario)
@@ -2665,15 +2553,11 @@ def ia_perguntar():
 
 @app.route("/ia/comprar", methods=["POST"])
 def ia_comprar():
-    # troca pontos da carteira por perguntas extras do log
-    # so a carteira diminui o total de pontos continua igual
+    # troca pontos da carteira por perguntas extras do log sem mexer no total de pontos
     if not session.get("id_usuario"):
         return redirect(url_for("login"))
 
-    try:
-        quantidade_de_perguntas = int(request.form.get("pacote", 0))
-    except ValueError:
-        quantidade_de_perguntas = 0
+    quantidade_de_perguntas = ler_numero_inteiro_do_formulario("pacote")
 
     if quantidade_de_perguntas not in PACOTES_DE_PERGUNTAS:
         flash("Escolha um pacote de perguntas válido.")
@@ -2682,16 +2566,8 @@ def ia_comprar():
     custo_em_pontos = PACOTES_DE_PERGUNTAS[quantidade_de_perguntas]
     db = _Session()
     try:
-        desempenho = db.query(Desempenho).filter(Desempenho.id_usuario == session["id_usuario"]).first()
-        pontos_na_carteira = desempenho.pontos_carteira if desempenho else 0
-
-        if desempenho is None or pontos_na_carteira < custo_em_pontos:
-            flash(
-                f"Você precisa de {custo_em_pontos} pontos na carteira para esse pacote. "
-                f"Você tem {pontos_na_carteira}."
-            )
-        else:
-            desempenho.pontos_carteira -= custo_em_pontos
+        desempenho = buscar_desempenho_do_usuario(db, session["id_usuario"])
+        if cobrar_pacote_da_carteira(desempenho, custo_em_pontos):
             desempenho.perguntas_extras_ia += quantidade_de_perguntas
             db.commit()
             flash(f"Pronto! Você comprou {quantidade_de_perguntas} perguntas por {custo_em_pontos} pontos.", "sucesso")
@@ -2701,8 +2577,7 @@ def ia_comprar():
     return redirect(url_for("ia_chat"))
 
 
-# ranking placar dos alunos por pontos query passada pela turma
-# reescrita em sqlalchemy em vez de sql cru
+# ranking placar dos alunos por pontos
 @app.route("/ranking")
 def ranking():
     if not session.get("id_usuario"):
@@ -2710,22 +2585,14 @@ def ranking():
 
     db = _Session()
     try:
-        linhas = (
-            db.query(Usuario.nome, Usuario.subnick, Desempenho.total_pontos, Desempenho.sequencia_maxima)
-            .join(Desempenho, Desempenho.id_usuario == Usuario.id_usuario)
-            .filter(Usuario.role == 2)
-            .order_by(Desempenho.total_pontos.desc())
-            .all()
-        )
+        linhas = buscar_ranking_dos_alunos(db)
     finally:
         db.close()
 
     return render_template("ranking.html", linhas=linhas)
 
 
-# admin todas as rotas abaixo exigem usuario logado com role = 1
-# nao tem decorator cada rota confere a sessao e o role no inicio
-# dela mesma do mesmo jeito que as rotas de aluno conferem o login
+# admin todas as rotas abaixo exigem usuario logado com role admin e cada rota confere isso no inicio sem decorator
 @app.route("/admin")
 def admin_dashboard():
     if not session.get("id_usuario"):
@@ -2734,10 +2601,10 @@ def admin_dashboard():
     db = _Session()
     try:
         admin = db.get(Usuario, session["id_usuario"])
-        if not admin or admin.role != 1:
+        if not admin or admin.role != ROLE_ADMIN:
             return redirect(url_for("index"))
 
-        total_usuarios = db.query(Usuario).filter(Usuario.role == 2, Usuario.ativo == True).count()
+        total_usuarios = db.query(Usuario).filter(Usuario.role == ROLE_ALUNO, Usuario.ativo == True).count()
         minutos_totais = int(db.query(func.sum(Desempenho.segundos_totais)).scalar() or 0) // 60
         pontos_distribuidos = db.query(func.sum(Desempenho.total_pontos)).scalar() or 0
         desafios_concluidos = (
@@ -2771,7 +2638,7 @@ def admin_usuarios():
     db = _Session()
     try:
         admin = db.get(Usuario, session["id_usuario"])
-        if not admin or admin.role != 1:
+        if not admin or admin.role != ROLE_ADMIN:
             return redirect(url_for("index"))
 
         usuarios = db.query(Usuario).order_by(Usuario.nome).all()
@@ -2788,7 +2655,7 @@ def admin_editar_usuario(id_usuario):
     db = _Session()
     try:
         admin = db.get(Usuario, session["id_usuario"])
-        if not admin or admin.role != 1:
+        if not admin or admin.role != ROLE_ADMIN:
             return redirect(url_for("index"))
 
         usuario = db.get(Usuario, id_usuario)
@@ -2823,7 +2690,7 @@ def admin_alternar_status_usuario(id_usuario):
     db = _Session()
     try:
         admin = db.get(Usuario, session["id_usuario"])
-        if not admin or admin.role != 1:
+        if not admin or admin.role != ROLE_ADMIN:
             return redirect(url_for("index"))
 
         usuario = db.get(Usuario, id_usuario)
@@ -2845,7 +2712,7 @@ def admin_fases():
     db = _Session()
     try:
         admin = db.get(Usuario, session["id_usuario"])
-        if not admin or admin.role != 1:
+        if not admin or admin.role != ROLE_ADMIN:
             return redirect(url_for("index"))
 
         fases = db.query(Fase).order_by(Fase.ordem).all()
@@ -2863,7 +2730,7 @@ def admin_fase_form(id_fase=None):
     db = _Session()
     try:
         admin = db.get(Usuario, session["id_usuario"])
-        if not admin or admin.role != 1:
+        if not admin or admin.role != ROLE_ADMIN:
             return redirect(url_for("index"))
 
         fase = db.get(Fase, id_fase) if id_fase else None
@@ -2872,10 +2739,7 @@ def admin_fase_form(id_fase=None):
 
         if request.method == "POST":
             nome_fase = request.form.get("nome_fase", "").strip()
-            try:
-                ordem = int(request.form.get("ordem", 0))
-            except ValueError:
-                ordem = 0
+            ordem = ler_numero_inteiro_do_formulario("ordem")
 
             if not nome_fase or ordem < 1:
                 flash("Preencha o nome e uma ordem válida.")
@@ -2907,7 +2771,7 @@ def admin_alternar_status_fase(id_fase):
     db = _Session()
     try:
         admin = db.get(Usuario, session["id_usuario"])
-        if not admin or admin.role != 1:
+        if not admin or admin.role != ROLE_ADMIN:
             return redirect(url_for("index"))
 
         fase = db.get(Fase, id_fase)
@@ -2929,14 +2793,14 @@ def admin_desafios(id_fase):
     db = _Session()
     try:
         admin = db.get(Usuario, session["id_usuario"])
-        if not admin or admin.role != 1:
+        if not admin or admin.role != ROLE_ADMIN:
             return redirect(url_for("index"))
 
         fase = db.get(Fase, id_fase)
         if fase is None:
             return redirect(url_for("admin_fases"))
 
-        desafios = sorted(fase.desafios, key=lambda d: d.ordem)
+        desafios = sorted(fase.desafios, key=lambda desafio: desafio.ordem)
         return render_template("admin_desafios.html", admin=admin, fase=fase, desafios=desafios)
     finally:
         db.close()
@@ -2951,7 +2815,7 @@ def admin_desafio_form(id_fase=None, id_desafio=None):
     db = _Session()
     try:
         admin = db.get(Usuario, session["id_usuario"])
-        if not admin or admin.role != 1:
+        if not admin or admin.role != ROLE_ADMIN:
             return redirect(url_for("index"))
 
         desafio = db.get(Desafio, id_desafio) if id_desafio else None
@@ -2962,12 +2826,9 @@ def admin_desafio_form(id_fase=None, id_desafio=None):
             return redirect(url_for("admin_fases"))
 
         if request.method == "POST":
-            try:
-                ordem = int(request.form.get("ordem", 0))
-                estrelas = int(request.form.get("estrelas", 0))
-                tempo_limite_seg = int(request.form.get("tempo_limite_seg", 0))
-            except ValueError:
-                ordem = estrelas = tempo_limite_seg = 0
+            ordem = ler_numero_inteiro_do_formulario("ordem")
+            estrelas = ler_numero_inteiro_do_formulario("estrelas")
+            tempo_limite_seg = ler_numero_inteiro_do_formulario("tempo_limite_seg")
 
             if ordem < 1 or not (1 <= estrelas <= 5) or tempo_limite_seg < 1:
                 flash("Confira ordem, estrelas (1 a 5) e tempo limite.")
@@ -2976,8 +2837,7 @@ def admin_desafio_form(id_fase=None, id_desafio=None):
                 desafio_e_novo = desafio is None
                 try:
                     if desafio is None:
-                        # desafio novo nasce inativo porque ainda nao tem pergunta
-                        # o admin cadastra as perguntas e depois ativa
+                        # desafio novo nasce inativo porque ainda nao tem pergunta e o admin cadastra as perguntas e depois ativa
                         desafio = Desafio(
                             id_fase=fase.id_fase,
                             ordem=ordem,
@@ -3015,7 +2875,7 @@ def admin_alternar_status_desafio(id_desafio):
     db = _Session()
     try:
         admin = db.get(Usuario, session["id_usuario"])
-        if not admin or admin.role != 1:
+        if not admin or admin.role != ROLE_ADMIN:
             return redirect(url_for("index"))
 
         desafio = db.get(Desafio, id_desafio)
@@ -3034,8 +2894,7 @@ def admin_alternar_status_desafio(id_desafio):
     return redirect(url_for("admin_desafios", id_fase=id_fase) if id_fase else url_for("admin_fases"))
 
 
-# crud tutorial telas com foto dentro de uma fase
-# as fotos enviadas ficam em static/uploads/tutoriais e o banco guarda so o caminho
+# crud tutorial telas com foto dentro de uma fase e as fotos ficam em static/uploads/tutoriais e o banco guarda so o caminho
 PASTA_DAS_IMAGENS_DO_TUTORIAL = os.path.join(app.root_path, "static", "uploads", "tutoriais")
 EXTENSOES_DE_IMAGEM_PERMITIDAS = ["png", "jpg", "jpeg", "webp", "gif"]  # svg fica de fora por seguranca
 TAMANHO_MAXIMO_DO_ENVIO_EM_MB = 5
@@ -3060,14 +2919,14 @@ def admin_tutorial_telas(id_fase):
     db = _Session()
     try:
         admin = db.get(Usuario, session["id_usuario"])
-        if not admin or admin.role != 1:
+        if not admin or admin.role != ROLE_ADMIN:
             return redirect(url_for("index"))
 
         fase = db.get(Fase, id_fase)
         if fase is None:
             return redirect(url_for("admin_fases"))
 
-        telas = sorted(fase.tutorial_telas, key=lambda t: t.ordem)
+        telas = sorted(fase.tutorial_telas, key=lambda tela: tela.ordem)
         return render_template("admin_tutorial_telas.html", admin=admin, fase=fase, telas=telas)
     finally:
         db.close()
@@ -3082,7 +2941,7 @@ def admin_tutorial_form(id_fase=None, id_tutorial_tela=None):
     db = _Session()
     try:
         admin = db.get(Usuario, session["id_usuario"])
-        if not admin or admin.role != 1:
+        if not admin or admin.role != ROLE_ADMIN:
             return redirect(url_for("index"))
 
         tela = db.get(TutorialTela, id_tutorial_tela) if id_tutorial_tela else None
@@ -3093,10 +2952,7 @@ def admin_tutorial_form(id_fase=None, id_tutorial_tela=None):
             return redirect(url_for("admin_fases"))
 
         if request.method == "POST":
-            try:
-                ordem = int(request.form.get("ordem", 0))
-            except ValueError:
-                ordem = 0
+            ordem = ler_numero_inteiro_do_formulario("ordem")
             titulo = request.form.get("titulo", "").strip() or None
             texto = request.form.get("texto", "").strip() or None
             arquivo_enviado = request.files.get("imagem")
@@ -3161,7 +3017,7 @@ def admin_alternar_status_tutorial(id_tutorial_tela):
     db = _Session()
     try:
         admin = db.get(Usuario, session["id_usuario"])
-        if not admin or admin.role != 1:
+        if not admin or admin.role != ROLE_ADMIN:
             return redirect(url_for("index"))
 
         tela = db.get(TutorialTela, id_tutorial_tela)
@@ -3183,7 +3039,7 @@ def admin_confirmar_status_tutorial(id_tutorial_tela):
     db = _Session()
     try:
         admin = db.get(Usuario, session["id_usuario"])
-        if not admin or admin.role != 1:
+        if not admin or admin.role != ROLE_ADMIN:
             return redirect(url_for("index"))
 
         tela = db.get(TutorialTela, id_tutorial_tela)
@@ -3212,14 +3068,14 @@ def admin_perguntas(id_desafio):
     db = _Session()
     try:
         admin = db.get(Usuario, session["id_usuario"])
-        if not admin or admin.role != 1:
+        if not admin or admin.role != ROLE_ADMIN:
             return redirect(url_for("index"))
 
         desafio = db.get(Desafio, id_desafio)
         if desafio is None:
             return redirect(url_for("admin_fases"))
 
-        perguntas = sorted(desafio.perguntas, key=lambda p: p.ordem)
+        perguntas = sorted(desafio.perguntas, key=lambda pergunta: pergunta.ordem)
         return render_template("admin_perguntas.html", admin=admin, desafio=desafio, perguntas=perguntas)
     finally:
         db.close()
@@ -3237,7 +3093,7 @@ def admin_pergunta_form(id_desafio=None, id_pergunta=None):
     db = _Session()
     try:
         admin = db.get(Usuario, session["id_usuario"])
-        if not admin or admin.role != 1:
+        if not admin or admin.role != ROLE_ADMIN:
             return redirect(url_for("index"))
 
         pergunta = db.get(Pergunta, id_pergunta) if id_pergunta else None
@@ -3250,90 +3106,82 @@ def admin_pergunta_form(id_desafio=None, id_pergunta=None):
         alternativas_atuais = {}
         letra_correta_atual = None
         if pergunta:
-            for alt in pergunta.alternativas:
-                if alt.ativo:
-                    alternativas_atuais[alt.letra] = alt.texto
-                    if alt.correta:
-                        letra_correta_atual = alt.letra
+            for alternativa in pergunta.alternativas:
+                if alternativa.ativo:
+                    alternativas_atuais[alternativa.letra] = alternativa.texto
+                    if alternativa.correta:
+                        letra_correta_atual = alternativa.letra
 
         if request.method == "POST":
             enunciado = request.form.get("enunciado", "").strip()
             tipo = request.form.get("tipo", "alternativa")
-            try:
-                ordem = int(request.form.get("ordem", 0))
-            except ValueError:
-                ordem = 0
+            ordem = ler_numero_inteiro_do_formulario("ordem")
 
-            if not enunciado or ordem < 1:
-                flash("Preencha o enunciado e uma ordem válida.")
-                return render_template(
-                    "admin_pergunta_form.html",
-                    admin=admin,
-                    desafio=desafio,
-                    pergunta=pergunta,
-                    letras=LETRAS_ALTERNATIVA,
-                    alternativas_atuais=alternativas_atuais,
-                    letra_correta_atual=letra_correta_atual,
-                )
-
+            letra_correta = request.form.get("letra_correta", "A")
             if tipo == "digitada":
                 resposta_correta = request.form.get("resposta_correta", "").strip()
             else:
-                letra_correta = request.form.get("letra_correta", "A")
                 resposta_correta = letra_correta
 
-            try:
-                if pergunta is None:
-                    pergunta = Pergunta(
-                        id_desafio=desafio.id_desafio,
-                        ordem=ordem,
-                        tipo=tipo,
-                        enunciado=enunciado,
-                        resposta_correta=resposta_correta,
-                    )
-                    db.add(pergunta)
-                    db.flush()
-                else:
-                    pergunta.ordem = ordem
-                    pergunta.tipo = tipo
-                    pergunta.enunciado = enunciado
-                    pergunta.resposta_correta = resposta_correta
+            if not enunciado or ordem < 1:
+                flash("Preencha o enunciado e uma ordem válida.")
+            else:
+                try:
+                    if pergunta is None:
+                        pergunta = Pergunta(
+                            id_desafio=desafio.id_desafio,
+                            ordem=ordem,
+                            tipo=tipo,
+                            enunciado=enunciado,
+                            resposta_correta=resposta_correta,
+                        )
+                        db.add(pergunta)
+                        db.flush()
+                    else:
+                        pergunta.ordem = ordem
+                        pergunta.tipo = tipo
+                        pergunta.enunciado = enunciado
+                        pergunta.resposta_correta = resposta_correta
 
-                if tipo == "alternativa":
-                    existentes = {a.letra: a for a in pergunta.alternativas if a.ativo}
-                    # primeiro tira o correta de todo mundo senao o
-                    # trigger do banco acusa 2 alternativas corretas ao
-                    # mesmo tempo quando a resposta certa muda de letra
-                    for alt in existentes.values():
-                        alt.correta = False
-                    db.flush()
+                    if tipo == "alternativa":
+                        alternativas_existentes = {
+                            alternativa.letra: alternativa for alternativa in alternativas_ativas_ordenadas(pergunta)
+                        }
+                        # primeiro tira o correta de todo mundo senao o trigger do banco acusa 2 alternativas corretas quando a resposta muda de letra
+                        for alternativa in alternativas_existentes.values():
+                            alternativa.correta = False
+                        db.flush()
 
-                    for letra in LETRAS_ALTERNATIVA:
-                        texto_alt = request.form.get(f"alternativa_{letra}", "").strip()
-                        if not texto_alt:
-                            continue
-                        if letra in existentes:
-                            existentes[letra].texto = texto_alt
-                        else:
-                            db.add(Alternativa(id_pergunta=pergunta.id_pergunta, letra=letra, texto=texto_alt))
-                    db.flush()
+                        for letra in LETRAS_ALTERNATIVA:
+                            texto_da_alternativa = request.form.get(f"alternativa_{letra}", "").strip()
+                            if not texto_da_alternativa:
+                                continue
+                            if letra in alternativas_existentes:
+                                alternativas_existentes[letra].texto = texto_da_alternativa
+                            else:
+                                db.add(
+                                    Alternativa(
+                                        id_pergunta=pergunta.id_pergunta, letra=letra, texto=texto_da_alternativa
+                                    )
+                                )
+                        db.flush()
 
-                    alvo = db.query(Alternativa).filter(
-                        Alternativa.id_pergunta == pergunta.id_pergunta,
-                        Alternativa.letra == letra_correta,
-                        Alternativa.ativo == True,
-                    ).first()
-                    if alvo:
-                        alvo.correta = True
+                        alternativa_correta = db.query(Alternativa).filter(
+                            Alternativa.id_pergunta == pergunta.id_pergunta,
+                            Alternativa.letra == letra_correta,
+                            Alternativa.ativo == True,
+                        ).first()
+                        if alternativa_correta:
+                            alternativa_correta.correta = True
 
-                # as dicas guardadas falavam da pergunta antiga entao o log escreve de novo quando precisar
-                db.query(DicaPergunta).filter(DicaPergunta.id_pergunta == pergunta.id_pergunta).delete()
-                db.commit()
-                flash("Pergunta salva.")
-                return redirect(url_for("admin_perguntas", id_desafio=desafio.id_desafio))
-            except IntegrityError:
-                db.rollback()
-                flash("Já existe uma pergunta com essa ordem nesse desafio.")
+                    # as dicas guardadas falavam da pergunta antiga entao o log escreve de novo quando precisar
+                    db.query(DicaPergunta).filter(DicaPergunta.id_pergunta == pergunta.id_pergunta).delete()
+                    db.commit()
+                    flash("Pergunta salva.")
+                    return redirect(url_for("admin_perguntas", id_desafio=desafio.id_desafio))
+                except IntegrityError:
+                    db.rollback()
+                    flash("Já existe uma pergunta com essa ordem nesse desafio.")
 
         return render_template(
             "admin_pergunta_form.html",
@@ -3356,14 +3204,16 @@ def admin_alternar_status_pergunta(id_pergunta):
     db = _Session()
     try:
         admin = db.get(Usuario, session["id_usuario"])
-        if not admin or admin.role != 1:
+        if not admin or admin.role != ROLE_ADMIN:
             return redirect(url_for("index"))
 
         pergunta = db.get(Pergunta, id_pergunta)
         id_desafio = pergunta.id_desafio if pergunta else None
         if pergunta:
             outras_perguntas_ativas = [
-                p for p in pergunta.desafio.perguntas if p.ativo and p.id_pergunta != pergunta.id_pergunta
+                outra_pergunta
+                for outra_pergunta in pergunta.desafio.perguntas
+                if outra_pergunta.ativo and outra_pergunta.id_pergunta != pergunta.id_pergunta
             ]
             if pergunta.ativo and not outras_perguntas_ativas and pergunta.desafio.ativo:
                 flash(
@@ -3388,7 +3238,7 @@ def admin_recompensas():
     db = _Session()
     try:
         admin = db.get(Usuario, session["id_usuario"])
-        if not admin or admin.role != 1:
+        if not admin or admin.role != ROLE_ADMIN:
             return redirect(url_for("index"))
 
         recompensas_todas = db.query(Recompensa).order_by(Recompensa.valor_necessario).all()
@@ -3409,7 +3259,7 @@ def admin_recompensa_form(id_recompensa=None):
     db = _Session()
     try:
         admin = db.get(Usuario, session["id_usuario"])
-        if not admin or admin.role != 1:
+        if not admin or admin.role != ROLE_ADMIN:
             return redirect(url_for("index"))
 
         recompensa = db.get(Recompensa, id_recompensa) if id_recompensa else None
@@ -3421,10 +3271,7 @@ def admin_recompensa_form(id_recompensa=None):
             descricao = request.form.get("descricao", "").strip()
             tipo = request.form.get("tipo", "pontos")
             icone = request.form.get("icone", "").strip()
-            try:
-                valor_necessario = int(request.form.get("valor_necessario", 0))
-            except ValueError:
-                valor_necessario = 0
+            valor_necessario = ler_numero_inteiro_do_formulario("valor_necessario")
 
             if not nome or valor_necessario < 1:
                 flash("Preencha o nome e um valor necessário válido.")
@@ -3459,7 +3306,7 @@ def admin_alternar_status_recompensa(id_recompensa):
     db = _Session()
     try:
         admin = db.get(Usuario, session["id_usuario"])
-        if not admin or admin.role != 1:
+        if not admin or admin.role != ROLE_ADMIN:
             return redirect(url_for("index"))
 
         recompensa = db.get(Recompensa, id_recompensa)
@@ -3481,13 +3328,13 @@ def admin_rotinas():
     db = _Session()
     try:
         admin = db.get(Usuario, session["id_usuario"])
-        if not admin or admin.role != 1:
+        if not admin or admin.role != ROLE_ADMIN:
             return redirect(url_for("index"))
 
         linhas = (
             db.query(Usuario, Rotina)
             .join(Rotina, Rotina.id_usuario == Usuario.id_usuario)
-            .filter(Usuario.role == 2)
+            .filter(Usuario.role == ROLE_ALUNO)
             .order_by(Usuario.nome)
             .all()
         )
@@ -3504,7 +3351,7 @@ def admin_rotina_detalhe(id_usuario):
     db = _Session()
     try:
         admin = db.get(Usuario, session["id_usuario"])
-        if not admin or admin.role != 1:
+        if not admin or admin.role != ROLE_ADMIN:
             return redirect(url_for("index"))
 
         aluno = db.get(Usuario, id_usuario)
@@ -3516,7 +3363,7 @@ def admin_rotina_detalhe(id_usuario):
         if rotina:
             blocos = sorted(
                 db.query(Agenda).filter(Agenda.id_rotina == rotina.id_rotina).all(),
-                key=lambda b: DIA_SEMANA_PYTHON.index(b.dia_semana.value),
+                key=lambda bloco: DIA_SEMANA_PYTHON.index(bloco.dia_semana.value),
             )
 
         return render_template(
@@ -3535,20 +3382,12 @@ def admin_relatorios():
     db = _Session()
     try:
         admin = db.get(Usuario, session["id_usuario"])
-        if not admin or admin.role != 1:
+        if not admin or admin.role != ROLE_ADMIN:
             return redirect(url_for("index"))
 
-        # ranking geral mesma query da tela publica de ranking
-        rank = (
-            db.query(Usuario.nome, Usuario.subnick, Desempenho.total_pontos, Desempenho.sequencia_maxima)
-            .join(Desempenho, Desempenho.id_usuario == Usuario.id_usuario)
-            .filter(Usuario.role == 2)
-            .order_by(Desempenho.total_pontos.desc())
-            .all()
-        )
+        ranking_dos_alunos = buscar_ranking_dos_alunos(db)
 
-        # progresso por fase reescrita da query sql que a turma ja tinha
-        # montado na versao sqlalchemy sem sql cru como o models.py pede
+        # progresso por fase montado em sqlalchemy sem sql cru como o models.py pede
         progresso = (
             db.query(
                 Usuario.nome,
@@ -3567,18 +3406,17 @@ def admin_relatorios():
             .all()
         )
 
-        # tempo total por aluno ja vem acumulado em minutos_totais
-        # a cada desafio concluido nao precisa somar tentativa por tentativa de novo
+        # tempo total por aluno ja vem acumulado em minutos_totais entao nao precisa somar tentativa por tentativa
         tempo_por_aluno = (
             db.query(Usuario.nome, Desempenho.minutos_totais)
             .join(Desempenho, Desempenho.id_usuario == Usuario.id_usuario)
-            .filter(Usuario.role == 2)
+            .filter(Usuario.role == ROLE_ALUNO)
             .order_by(Desempenho.minutos_totais.desc())
             .all()
         )
 
         return render_template(
-            "admin_relatorios.html", admin=admin, ranking=rank, progresso=progresso, tempo_por_aluno=tempo_por_aluno
+            "admin_relatorios.html", admin=admin, ranking=ranking_dos_alunos, progresso=progresso, tempo_por_aluno=tempo_por_aluno
         )
     finally:
         db.close()
@@ -3593,7 +3431,7 @@ def admin_feedbacks():
     db = _Session()
     try:
         admin = db.get(Usuario, session["id_usuario"])
-        if not admin or admin.role != 1:
+        if not admin or admin.role != ROLE_ADMIN:
             return redirect(url_for("index"))
 
         linhas = (
@@ -3675,7 +3513,7 @@ def admin_confirmar_status_usuario(id_usuario):
     db = _Session()
     try:
         admin = db.get(Usuario, session["id_usuario"])
-        if not admin or admin.role != 1:
+        if not admin or admin.role != ROLE_ADMIN:
             return redirect(url_for("index"))
 
         usuario = db.get(Usuario, id_usuario)
@@ -3703,7 +3541,7 @@ def admin_confirmar_status_fase(id_fase):
     db = _Session()
     try:
         admin = db.get(Usuario, session["id_usuario"])
-        if not admin or admin.role != 1:
+        if not admin or admin.role != ROLE_ADMIN:
             return redirect(url_for("index"))
 
         fase = db.get(Fase, id_fase)
@@ -3731,7 +3569,7 @@ def admin_confirmar_status_desafio(id_desafio):
     db = _Session()
     try:
         admin = db.get(Usuario, session["id_usuario"])
-        if not admin or admin.role != 1:
+        if not admin or admin.role != ROLE_ADMIN:
             return redirect(url_for("index"))
 
         desafio = db.get(Desafio, id_desafio)
@@ -3759,7 +3597,7 @@ def admin_confirmar_status_pergunta(id_pergunta):
     db = _Session()
     try:
         admin = db.get(Usuario, session["id_usuario"])
-        if not admin or admin.role != 1:
+        if not admin or admin.role != ROLE_ADMIN:
             return redirect(url_for("index"))
 
         pergunta = db.get(Pergunta, id_pergunta)
@@ -3787,7 +3625,7 @@ def admin_confirmar_status_recompensa(id_recompensa):
     db = _Session()
     try:
         admin = db.get(Usuario, session["id_usuario"])
-        if not admin or admin.role != 1:
+        if not admin or admin.role != ROLE_ADMIN:
             return redirect(url_for("index"))
 
         recompensa = db.get(Recompensa, id_recompensa)
@@ -3807,12 +3645,7 @@ def admin_confirmar_status_recompensa(id_recompensa):
         db.close()
 
 
-# telas de erro 404 pagina nao existe e 500 algo deu errado do
-# nosso lado sem internet nao da pra fazer aqui como o app nao
-# usa javascript pra buscar dados e tudo pagina inteira carregada
-# pelo servidor se o aluno estiver sem internet o pedido nem chega
-# no flask quem mostra a tela de sem conexao nesse caso e o
-# proprio navegador nao da pra personalizar isso sem js
+# telas de erro 404 e 500 e sem internet quem mostra a tela e o proprio navegador porque o pedido nem chega no flask
 @app.errorhandler(404)
 def erro_404(erro):
     return (
@@ -3850,6 +3683,5 @@ def erro_500(erro):
 
 
 if __name__ == "__main__":
-    # o modo debug mostra erros detalhados e deixa rodar codigo pelo navegador
-    # por isso so liga se FLASK_DEBUG=1 estiver no .env da sua maquina
+    # o modo debug mostra erros detalhados e deixa rodar codigo pelo navegador por isso so liga com FLASK_DEBUG=1 no .env
     app.run(debug=os.getenv("FLASK_DEBUG", "0") == "1")

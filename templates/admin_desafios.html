@@ -1,9 +1,17 @@
-{% extends "base.html" %}
-{% block title %}Desafios de {{ fase.nome_fase }} — Admin LOG+{% endblock %}
-{% block extra_css %}
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Desafios de {{ fase.nome_fase }} — Admin LOG+</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;600;700&family=Lexend:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
-{% endblock %}
-{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/acessibilidade.css') }}">
+</head>
+<body class="tema-{{ session.get('tema', 'padrao') }} fonte-{{ session.get('tamanho_fonte', 'normal') }}">
 <div class="admin-shell">
   <div class="admin-topo">
     <h1>LOG+ Admin</h1>
@@ -67,4 +75,5 @@
     {% endfor %}
   </table>
 </div>
-{% endblock %}
+</body>
+</html>

@@ -1,10 +1,6 @@
-/* acessibilidade tamanho da fonte tema de alto contraste e menos animacao
-   carregado por ultimo no base.html pra sobrescrever os outros arquivos
-   o body ganha as classes tema-padrao ou tema-contraste e fonte-normal fonte-grande ou fonte-muito_grande */
+/* fonte maior alto contraste e menos animacao carregado por ultimo pra sobrescrever os outros css */
 
-/* ---------- tamanho da fonte ----------
-   os tamanhos originais estao em px nos outros arquivos entao aqui cada
-   grupo repete o tamanho original multiplicado pela escala */
+/* tamanho da fonte repete cada tamanho original multiplicado pela escala */
 
 body.fonte-grande { --escala-fonte: 1.2; }
 body.fonte-muito_grande { --escala-fonte: 1.4; }
@@ -83,8 +79,7 @@ body:not(.fonte-normal) .dica-texto {
   line-height: 1.5;
 }
 
-/* ---------- alto contraste ----------
-   texto bem escuro, bordas firmes e fundo creme suave em vez de branco puro */
+/* alto contraste texto bem escuro bordas firmes e fundo creme suave em vez de branco puro */
 
 body.tema-contraste {
   --azul: #0b2f78;
@@ -268,8 +263,7 @@ body.tema-contraste summary:focus-visible {
   outline-offset: 2px;
 }
 
-/* ---------- menos animacao ----------
-   respeita quem pediu isso no sistema operacional */
+/* menos animacao respeita quem pediu isso no sistema operacional */
 
 @media (prefers-reduced-motion: reduce) {
   * {

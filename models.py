@@ -1,30 +1,16 @@
-# log+ models.py
-# mapeamento orm sqlalchemy de todas as tabelas do banco logmais
-#
-# importante sobre sql injection
-# usar o orm do sqlalchemy session.query session.add e filtros com .filter
-# ja protege contra sql injection porque as consultas saem parametrizadas
-# nunca monte sql juntando texto vindo do formulario dentro de uma string
-# se precisar de sql cru use text com parametros nomeados
-#
-# este arquivo so define os modelos as telas do flask app.py devem sempre
-# usar o orm e nunca montar sql com dados vindos do usuario
+# mapeamento orm das tabelas do banco logmais usando sempre o orm e nunca sql montado com texto do formulario
 
 import os
 
 from dotenv import load_dotenv
 from sqlalchemy import (
     create_engine, Column, Integer, String, ForeignKey,
-    DateTime, Boolean, Text, Enum, CheckConstraint, UniqueConstraint,
-    Time, Date
+    DateTime, Boolean, Text, Enum, CheckConstraint, UniqueConstraint, Date
 )
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from sqlalchemy.sql import func
 import enum
 
-# =====================================================================
-# conexao o usuario a senha e o host ficam no arquivo .env variavel database_url
-# =====================================================================
 # o load_dotenv precisa rodar antes do create_engine pra database_url existir
 load_dotenv()
 URL_DO_BANCO = os.getenv("DATABASE_URL")
@@ -35,15 +21,7 @@ Base = declarative_base()
 _Session = sessionmaker(bind=Engine)
 
 
-def get_session():
-    # use sempre essa funcao pra abrir uma sessao nova por requisicao
-    return _Session()
-
-
-# =====================================================================
-# enums python espelham os enum do mysql dao autocomplete e validacao
-# ja no lado do python antes mesmo de chegar no banco
-# =====================================================================
+# enums python que espelham os enum do mysql
 class PeriodoDia(str, enum.Enum):
     manha = "manha"
     tarde = "tarde"
@@ -77,7 +55,6 @@ class TipoRecompensa(str, enum.Enum):
     pontos = "pontos"
 
 
-
 # usuario
 class Usuario(Base):
     __tablename__ = "usuario"
@@ -93,8 +70,7 @@ class Usuario(Base):
     modo_sem_pressao = Column(Boolean, nullable=False, default=False)
     tema = Column(String(20), nullable=False, default="padrao")  # padrao ou contraste
     tamanho_fonte = Column(String(20), nullable=False, default="normal")  # normal grande ou muito_grande
-    # e-mail confirmado com o codigo enviado pelo brevo o banco assume verdadeiro pras contas
-    # antigas e pro seed e o cadastro do app grava falso de proposito ate o aluno digitar o codigo
+    # contas antigas e o seed ja nascem verificadas e o cadastro do app grava falso ate o aluno digitar o codigo
     email_verificado = Column(Boolean, nullable=False, default=True)
     codigo_ultimo_envio_em = Column(DateTime)  # controla a espera entre um envio e outro
     codigo_tentativas_erradas = Column(Integer, nullable=False, default=0)
@@ -114,10 +90,6 @@ class Usuario(Base):
     progressos = relationship("DesafioUsuario", back_populates="usuario")
     recompensas = relationship("RecompensaUsuario", back_populates="usuario")
     logs_ia = relationship("LogIA", back_populates="usuario")
-
-    @property
-    def eh_admin(self):
-        return self.role == 1
 
 
 # rotina e agenda
@@ -223,7 +195,7 @@ class Alternativa(Base):
     pergunta = relationship("Pergunta", back_populates="alternativas")
 
 
-# progresso resumo por usuario desafio + tentativas + respostas
+# progresso por aluno e desafio com tentativas e respostas
 class DesafioUsuario(Base):
     __tablename__ = "desafio_usuario"
 
@@ -390,9 +362,7 @@ class FeedbackAcessibilidade(Base):
     usuario = relationship("Usuario")
 
 
-# dicas escritas pelo log cada pergunta tem no maximo uma dica por nivel
-# a dica nao depende do aluno entao todos reaproveitam o mesmo texto
-# e a openai so e chamada uma vez por pergunta e nivel
+# dica do log guardada uma vez por pergunta e nivel e reaproveitada por todos os alunos
 class DicaPergunta(Base):
     __tablename__ = "dica_pergunta"
 

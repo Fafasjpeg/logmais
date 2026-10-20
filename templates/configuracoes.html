@@ -1,9 +1,17 @@
-{% extends "base.html" %}
-{% block title %}Configurações — LOG+{% endblock %}
-{% block extra_css %}
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Configurações — LOG+</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;600;700&family=Lexend:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
-{% endblock %}
-{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/acessibilidade.css') }}">
+</head>
+<body class="tema-{{ session.get('tema', 'padrao') }} fonte-{{ session.get('tamanho_fonte', 'normal') }}">
 <div class="tela-app">
   <header class="topo-azul">
     <a class="topo-voltar" href="{{ url_for('perfil') }}">←</a>
@@ -87,4 +95,5 @@
     </a>
   </nav>
 </div>
-{% endblock %}
+</body>
+</html>

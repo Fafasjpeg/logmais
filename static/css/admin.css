@@ -1,6 +1,4 @@
-/* estilos da area de admin telas de gestao sem referencia no
-   figma entao usa um layout mais utilitario tabelas formularios
-   em vez do frame de celular das telas de aluno */
+/* telas do admin com tabelas e formularios sem o frame de celular */
 
 body {
   justify-content: flex-start;
@@ -232,8 +230,7 @@ table.admin-tabela tr:last-child td {
   color: #555;
 }
 
-/* o painel tambem funciona em tela pequena
-   a tabela ganha rolagem lateral em vez de estourar a pagina */
+/* em tela pequena a tabela rola de lado */
 @media (max-width: 800px) {
   .admin-shell { padding: 16px 12px 40px; }
   table.admin-tabela { display: block; overflow-x: auto; }

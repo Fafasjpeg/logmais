@@ -201,8 +201,7 @@
   color: #40404d;
 }
 
-/* os tres textos abaixo de cada fase nome progresso e estado
-   o fundo da cor da pagina esconde a linha pontilhada que passa por tras */
+/* textos abaixo da fase com fundo da cor da pagina pra esconder a linha pontilhada */
 
 .fase-nome,
 .fase-progresso,
@@ -261,13 +260,9 @@
   color: #404252;
 }
 
-/* o rodape de navegacao .rodape / .rodape item / e o card de
-   avisos .avisos agora ficam em static/css/app.css compartilhado
-   com as outras telas depois do login */
+/* o rodape e os avisos ficam no app.css */
 
-/* telas mais estreitas que 390 pixels
-   as fases da trilha ficam em posicoes fixas desenhadas pra 390 entao o caminho inteiro encolhe junto
-   cada faixa de largura usa um zoom que cabe na tela */
+/* telas mais estreitas que 390 pixels encolhem o caminho inteiro com zoom */
 @media (max-width: 389px) {
   .trilha-caminho-inner { zoom: 0.97; }
 }

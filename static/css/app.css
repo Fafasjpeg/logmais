@@ -1,5 +1,4 @@
-/* estilos compartilhados por todas as telas depois do login
-   agenda assistente/rotina perfil recompensas log ia jogo */
+/* estilos das telas depois do login */
 
 .tela-app {
   width: 100%;
@@ -177,7 +176,7 @@
   background: var(--amarelo);
 }
 
-/* bolhas de chat assistente / log ia */
+/* bolhas de chat assistente log ia */
 
 .bolha-log {
   display: flex;
@@ -265,7 +264,7 @@
   margin-right: 8px;
 }
 
-/* animacao de acerto/erro tela de pergunta e de resultado */
+/* animacao de acerto erro tela de pergunta e de resultado */
 
 @keyframes pulso-acerto {
   0% { transform: scale(0.85); opacity: 0; }
@@ -279,7 +278,7 @@
   animation: pulso-acerto 0.4s ease-out;
 }
 
-/* quando nao passou a cor e suave e sem tremida, errar faz parte de aprender */
+/* quando nao passou a cor e suave e sem tremida errar faz parte de aprender */
 .feedback-errou {
   background: #fff6e0;
   border-color: #f0b429;
@@ -410,9 +409,7 @@
 .selo-card-dias { background: #dcebff; }
 .selo-card-dias .selo-card-icone { color: var(--azul); }
 
-/* tela da pergunta o topo (pergunta x de x barra e tempo) fica fixo no alto
-   e o enunciado a dica e as respostas ficam centralizados no espaco que sobra
-   margin auto no lugar de justify-content center pra nao cortar quando o conteudo for maior que a tela */
+/* tela da pergunta com topo fixo e o resto centralizado com margin auto pra nao cortar */
 
 .conteudo-pergunta,
 .conteudo-resultado {
@@ -547,8 +544,7 @@
   white-space: nowrap;
 }
 
-/* tela do log ia
-   topo com icone de informacao mensagens rolaveis no meio e campo de pergunta fixo embaixo */
+/* tela do log com mensagens rolando no meio e campo fixo embaixo */
 
 .topo-info {
   position: absolute;
@@ -706,8 +702,7 @@
   40% { opacity: 1; transform: translateY(-3px); }
 }
 
-/* resposta do log em markdown
-   os tamanhos usam em pra acompanhar o tamanho da letra escolhido na tela de configuracoes */
+/* resposta do log em markdown com tamanhos em em pra acompanhar a fonte escolhida */
 
 .bolha-log .texto-markdown {
   max-width: calc(100% - 44px);
@@ -955,8 +950,7 @@
   100% { transform: scale(1); }
 }
 
-/* ranking os tres primeiros colocados ouro prata e bronze
-   o texto e sempre preto porque tem bom contraste nas tres cores */
+/* podio do ranking com texto preto que contrasta nas tres cores */
 
 .cartao-ouro {
   background: #f7c948;
