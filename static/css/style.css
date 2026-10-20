@@ -55,6 +55,14 @@ body {
   margin: 40px 0 50px;
 }
 
+/* logo horizontal com a nuvem e o texto */
+.logo-img {
+  width: 260px;
+  max-width: 100%;
+  height: auto;
+  margin: 10px 0 30px;
+}
+
 .logo-log {
   color: var(--azul);
   font-weight: 700;

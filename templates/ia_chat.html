@@ -42,7 +42,7 @@
   <main class="conteudo-app ia-mensagens" id="ia-mensagens">
     <button type="button" class="botao-secundario ia-mais-antigas" id="ia-mais-antigas" hidden></button>
     <div id="ia-lista"></div>
-    <div class="bolha-log" id="ia-boas-vindas" hidden><span class="avatar-log">Log</span><p class="texto">Oi! Pode me perguntar qualquer coisa sobre matemática. Por exemplo: como somar frações com denominadores diferentes?</p></div>
+    <div class="bolha-log" id="ia-boas-vindas" hidden><img class="avatar-log" src="{{ url_for("static", filename="img/logonuvem.png") }}" alt="Log"><p class="texto">Oi! Pode me perguntar qualquer coisa sobre matemática. Por exemplo: como somar frações com denominadores diferentes?</p></div>
   </main>
 
   <section class="ia-rodape-chat">
@@ -73,7 +73,7 @@
       <span class="rodape-label">Agenda</span>
     </a>
     <a class="rodape-item rodape-ativo" href="{{ url_for('ia_chat') }}">
-      <span class="rodape-icone rodape-icone-ativo"><img class="rodape-img" src="{{ url_for('static', filename='img/nav/nav_log.png') }}" alt=""></span>
+      <span class="rodape-icone rodape-icone-ativo"><img class="rodape-img" src="{{ url_for('static', filename='img/logonuvem.png') }}" alt=""></span>
       <span class="rodape-label">Log (IA)</span>
     </a>
     <a class="rodape-item" href="{{ url_for('recompensas') }}">
@@ -285,7 +285,7 @@
     conversaPendente.innerHTML =
       '<p class="ia-data"></p>' +
       '<div class="bolha-usuario"><p class="texto"></p></div>' +
-      '<div class="bolha-log"><span class="avatar-log">Log</span>' +
+      '<div class="bolha-log"><img class="avatar-log" src="{{ url_for("static", filename="img/logonuvem.png") }}" alt="Log">' +
       '<div class="texto texto-markdown"><span class="digitando" role="status" aria-label="O Log está escrevendo"><i></i><i></i><i></i></span></div></div>';
     conversaPendente.querySelector(".ia-data").textContent = formatarData(new Date());
     conversaPendente.querySelector(".bolha-usuario .texto").textContent = textoDaPergunta;

@@ -6,6 +6,6 @@
     <p class="ia-data">{{ conversa.data.strftime('%d/%m/%Y às %H:%M') }}</p>
   {% endif %}
   <div class="bolha-usuario"><p class="texto">{{ conversa.pergunta_usuario }}</p></div>
-  <div class="bolha-log"><span class="avatar-log">Log</span><div class="texto texto-markdown">{{ conversa.resposta_ia|markdown_log }}</div></div>
+  <div class="bolha-log"><img class="avatar-log" src="{{ url_for("static", filename="img/logonuvem.png") }}" alt="Log"><div class="texto texto-markdown">{{ conversa.resposta_ia|markdown_log }}</div></div>
 </div>
 {% endfor %}
