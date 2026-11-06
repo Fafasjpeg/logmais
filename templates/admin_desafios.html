@@ -45,7 +45,6 @@
       <th>Ordem</th>
       <th>Dificuldade (1 a 5)</th>
       <th>Pontos</th>
-      <th>Tempo limite</th>
       <th>Perguntas ativas</th>
       <th>Status</th>
       <th>Ações</th>
@@ -55,7 +54,6 @@
         <td>{{ desafio.ordem }}</td>
         <td>{{ desafio.estrelas }} de 5</td>
         <td>{{ desafio.pontos }}</td>
-        <td>{{ desafio.tempo_limite_seg }}s</td>
         {% set perguntas_ativas = desafio.perguntas|selectattr('ativo')|list|length %}
         <td>{{ perguntas_ativas }}{% if perguntas_ativas == 0 %} <span class="selo-status selo-inativo">sem perguntas</span>{% endif %}</td>
         <td><span class="selo-status {{ 'selo-ativo' if desafio.ativo else 'selo-inativo' }}">{{ 'ativo' if desafio.ativo else 'inativo' }}</span></td>

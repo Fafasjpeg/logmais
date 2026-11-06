@@ -53,8 +53,13 @@
         {% endfor %}
         <p class="cartao-corpo"><strong>Tempo total: {{ tempo_gasto // 60 }}:{{ '%02d'|format(tempo_gasto % 60) }}</strong></p>
       {% endif %}
-      {% if acertos_novos %}
-        <p class="cartao-corpo">🔥 +{{ acertos_novos }} na sequência (agora {{ sequencia }})</p>
+      {# desafio repetido nao mexe na sequencia entao so mostra quando ela contou #}
+      {% if not era_repeticao %}
+        {% if sequencia_zerou %}
+          <p class="cartao-corpo">🔥 Você errou uma pergunta e a sequência voltou do zero. Agora: <strong>{{ sequencia }}</strong></p>
+        {% else %}
+          <p class="cartao-corpo">🔥 Sequência de acertos: <strong>{{ sequencia }}</strong></p>
+        {% endif %}
       {% endif %}
       <p class="cartao-corpo">Dias seguidos estudando: <strong>{{ dias_seguidos }}</strong></p>
       {% if pontos_ganhos %}

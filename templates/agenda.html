@@ -27,10 +27,11 @@
 
     <p class="cartao-corpo">Estes são seus dias de estudo da semana. Toque em "Iniciar estudo" para abrir a trilha de fases.</p>
 
-    {% for bloco in blocos %}
+    {# o tempo de cada dia vem dos desafios feitos naquele dia desta semana #}
+    {% for dia in dias_da_agenda %}
       <div class="cartao">
-        <p class="cartao-titulo">{{ dia_label[bloco.dia_semana.value] }}</p>
-        <p class="cartao-corpo">{{ bloco.minutos }} min · {{ 'concluída' if bloco.status.value == 'concluida' else 'pendente' }}</p>
+        <p class="cartao-titulo">{{ dia_label[dia.bloco.dia_semana.value] }}</p>
+        <p class="cartao-corpo">{{ dia.minutos_estudados }} de {{ dia.bloco.minutos }} min · {{ 'concluída' if dia.concluido else 'pendente' }}</p>
         <a class="botao-primario" style="display:block; text-align:center; text-decoration:none;" href="{{ url_for('trilha') }}">Iniciar estudo</a>
       </div>
     {% else %}
@@ -40,9 +41,18 @@
     <a class="botao-secundario" href="{{ url_for('configurar_rotina') }}">Reconfigurar rotina</a>
 
     <div class="cartao" style="border-color: var(--amarelo); margin-top: 20px;">
-      <p class="cartao-corpo">Progresso do dia: {{ progresso_hoje }}%</p>
-      <div class="barra-progresso"><div class="barra-progresso-preenchida" style="width: {{ progresso_hoje }}%;"></div></div>
-      <p class="cartao-corpo">Tempo restando: {{ minutos_restando }} minutos</p>
+      {% if dia_de_hoje %}
+        <p class="cartao-corpo">Progresso do dia: {{ dia_de_hoje.progresso }}%</p>
+        <div class="barra-progresso"><div class="barra-progresso-preenchida" style="width: {{ dia_de_hoje.progresso }}%;"></div></div>
+        <p class="cartao-corpo">Você estudou {{ dia_de_hoje.minutos_estudados }} de {{ dia_de_hoje.bloco.minutos }} minutos hoje.</p>
+        {% if dia_de_hoje.concluido %}
+          <p class="cartao-corpo"><strong>Meta de hoje concluída!</strong></p>
+        {% else %}
+          <p class="cartao-corpo">Tempo restando: {{ dia_de_hoje.minutos_restando }} minutos</p>
+        {% endif %}
+      {% else %}
+        <p class="cartao-corpo">Hoje não é um dia de estudo da sua rotina. Se quiser, pode estudar mesmo assim!</p>
+      {% endif %}
     </div>
   </main>
 

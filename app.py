@@ -21,7 +21,6 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from models import (
     Agenda,
     Alternativa,
-    AnuncioDicaUsuario,
     Desafio,
     DesafioUsuario,
     Desempenho,
@@ -126,16 +125,6 @@ def buscar_desempenho_do_usuario(db, id_usuario):
 
 def usuario_tem_rotina(db, id_usuario):
     return db.query(Rotina).filter(Rotina.id_usuario == id_usuario).first() is not None
-
-
-def aluno_ja_usou_o_anuncio(db, id_usuario, id_desafio):
-    # cada aluno pode usar o anuncio de dica uma vez por desafio
-    return (
-        db.query(AnuncioDicaUsuario)
-        .filter(AnuncioDicaUsuario.id_usuario == id_usuario, AnuncioDicaUsuario.id_desafio == id_desafio)
-        .first()
-        is not None
-    )
 
 
 def buscar_ranking_dos_alunos(db):
@@ -702,29 +691,47 @@ def agenda():
         blocos = db.query(Agenda).filter(Agenda.id_rotina == rotina.id_rotina).all()
         blocos = sorted(blocos, key=lambda bloco: DIA_SEMANA_PYTHON.index(bloco.dia_semana.value))
 
-        dia_da_semana_de_hoje = DIA_SEMANA_PYTHON[datetime.now().weekday()]
-        bloco_de_hoje = next(
-            (bloco for bloco in blocos if bloco.dia_semana.value == dia_da_semana_de_hoje), None
-        )
-        if bloco_de_hoje is None:
-            progresso_hoje = 0
-            minutos_restando = 0
-        elif bloco_de_hoje.status.value == "concluida":
-            progresso_hoje = 100
-            minutos_restando = 0
-        else:
-            progresso_hoje = 0
-            minutos_restando = bloco_de_hoje.minutos
+        # segundos estudados em cada dia desta semana somando o tempo de todas as tentativas de desafio inclusive as repetidas
+        hoje = date.today()
+        segunda_desta_semana = hoje - timedelta(days=hoje.weekday())
+        inicio_da_semana = datetime(segunda_desta_semana.year, segunda_desta_semana.month, segunda_desta_semana.day)
+        dia_da_tentativa = func.date(TentativaDesafio.data_tentativa)
+        segundos_por_dia = {}
+        for dia, segundos in (
+            db.query(dia_da_tentativa, func.sum(TentativaDesafio.tempo_gasto_seg))
+            .join(DesafioUsuario, TentativaDesafio.id_desafio_usuario == DesafioUsuario.id_desafio_usuario)
+            .filter(DesafioUsuario.id_usuario == usuario.id_usuario, TentativaDesafio.data_tentativa >= inicio_da_semana)
+            .group_by(dia_da_tentativa)
+        ):
+            segundos_por_dia[str(dia)] = int(segundos or 0)
+
+        # cada dia da rotina fica concluido quando o aluno estudou os minutos combinados naquele dia desta semana
+        dias_da_agenda = []
+        dia_de_hoje = None
+        for bloco in blocos:
+            data_do_dia = segunda_desta_semana + timedelta(days=DIA_SEMANA_PYTHON.index(bloco.dia_semana.value))
+            segundos_estudados = segundos_por_dia.get(str(data_do_dia), 0)
+            segundos_da_meta = bloco.minutos * 60
+            dia = {
+                "bloco": bloco,
+                "minutos_estudados": segundos_estudados // 60,
+                "concluido": segundos_estudados >= segundos_da_meta,
+                "progresso": min(100, segundos_estudados * 100 // segundos_da_meta) if segundos_da_meta else 0,
+                # arredonda pra cima pra nao mostrar 0 minutos restando quando ainda faltam alguns segundos
+                "minutos_restando": max(0, (segundos_da_meta - segundos_estudados + 59) // 60),
+            }
+            dias_da_agenda.append(dia)
+            if data_do_dia == hoje:
+                dia_de_hoje = dia
     finally:
         db.close()
 
     return render_template(
         "agenda.html",
         usuario=usuario,
-        blocos=blocos,
+        dias_da_agenda=dias_da_agenda,
+        dia_de_hoje=dia_de_hoje,
         dia_label=DIA_SEMANA_LABEL,
-        progresso_hoje=progresso_hoje,
-        minutos_restando=minutos_restando,
     )
 
 
@@ -988,13 +995,35 @@ def jogo_fase(id_fase):
 
         desafios_ativos = desafios_prontos_da_fase(fase)
         estados = calcular_estado_desafios(db, session["id_usuario"], desafios_ativos)
-        desafios_com_estado = [
-            {"desafio": desafio, "estado": estados[desafio.id_desafio]} for desafio in desafios_ativos
-        ]
+
+        # desafios que o aluno ja terminou alguma vez mas ainda nao acertou tudo
+        ids_dos_desafios_tentados_sem_acertar_tudo = {
+            progresso.id_desafio
+            for progresso in db.query(DesafioUsuario).filter(
+                DesafioUsuario.id_usuario == session["id_usuario"],
+                DesafioUsuario.id_desafio.in_([desafio.id_desafio for desafio in desafios_ativos]),
+                DesafioUsuario.total_tentativas > 0,
+                DesafioUsuario.concluido_primeira_vez == False,
+            )
+        }
+
+        # cor do cartao verde se acertou tudo amarelo se errou ou parou no meio e sem cor se ainda nao comecou
+        desafios_com_estado = []
+        for desafio in desafios_ativos:
+            estado = estados[desafio.id_desafio]
+            tentativa_em_andamento = session.get(f"tentativa_{desafio.id_desafio}") or {}
+            parou_no_meio = bool(tentativa_em_andamento.get("respostas"))
+            if estado == "completa":
+                cor_do_cartao = "verde"
+            elif estado == "atual" and (desafio.id_desafio in ids_dos_desafios_tentados_sem_acertar_tudo or parou_no_meio):
+                cor_do_cartao = "amarelo"
+            else:
+                cor_do_cartao = ""
+            desafios_com_estado.append({"desafio": desafio, "estado": estado, "cor": cor_do_cartao})
     finally:
         db.close()
 
-    return render_template("jogo_fase.html", fase=fase, desafios=desafios_com_estado, tem_tutorial=tem_tutorial)
+    return render_template("jogo_fase.html", fase=fase, desafios=desafios_com_estado)
 
 
 # tutorial de calculo telas com foto que o admin cadastra e abrem sozinhas na primeira entrada na fase e depois pelo link da fase
@@ -1019,8 +1048,13 @@ def tutorial_fase(id_fase, numero):
         telas_do_tutorial = sorted(telas_ativas, key=lambda tela: tela.ordem)
         total_de_telas = len(telas_do_tutorial)
 
-        # sem tutorial ou numero fora do intervalo segue direto pra fase
-        if total_de_telas == 0 or numero < 1 or numero > total_de_telas:
+        # sem tutorial volta pra fase com um aviso porque o aluno tocou no icone de informacao
+        if total_de_telas == 0:
+            flash("Esta fase ainda não tem tutorial.")
+            return redirect(url_for("jogo_fase", id_fase=fase.id_fase))
+
+        # numero fora do intervalo segue direto pra fase
+        if numero < 1 or numero > total_de_telas:
             return redirect(url_for("jogo_fase", id_fase=fase.id_fase))
 
         tela_atual = telas_do_tutorial[numero - 1]
@@ -1152,7 +1186,7 @@ SEGUNDOS_DO_ANUNCIO = 5
 PACOTES_DE_DICAS = {3: 40, 5: 55}
 
 # a dica usa um modelo barato sem raciocinio escondido e o texto fica na tabela dica_pergunta pra openai ser chamada uma vez por pergunta e nivel
-MODELO_DAS_DICAS = os.getenv("OPENAI_MODEL_DICAS", "gpt-4.1-nano").strip()
+MODELO_DAS_DICAS = os.getenv("OPENAI_MODEL_DICAS", "gpt-4o-mini").strip()
 LIMITE_TOKENS_DA_DICA = 150
 
 INSTRUCOES_DAS_DICAS = (
@@ -1408,7 +1442,6 @@ def jogo_pergunta(id_desafio, numero):
         pontos_do_aluno = desempenho.pontos_carteira if desempenho else 0
         dica_gratis_disponivel = bool(desempenho) and not desempenho.dica_gratis_usada
         dicas_extras = desempenho.dicas_extras if desempenho else 0
-        anuncio_disponivel = not aluno_ja_usou_o_anuncio(db, session["id_usuario"], id_desafio)
     finally:
         db.close()
 
@@ -1431,7 +1464,6 @@ def jogo_pergunta(id_desafio, numero):
         pontos_do_aluno=pontos_do_aluno,
         dica_gratis_disponivel=dica_gratis_disponivel,
         dicas_extras=dicas_extras,
-        anuncio_disponivel=anuncio_disponivel,
         pacotes_de_dicas=PACOTES_DE_DICAS,
     )
 
@@ -1444,16 +1476,7 @@ def jogo_anuncio(id_desafio, numero):
     if not session.get(f"tentativa_{id_desafio}"):
         return redirect(url_for("jogo_desafio", id_desafio=id_desafio))
 
-    db = _Session()
-    try:
-        ja_usou_o_anuncio = aluno_ja_usou_o_anuncio(db, session["id_usuario"], id_desafio)
-    finally:
-        db.close()
-
-    if ja_usou_o_anuncio:
-        flash("Você já usou o anúncio deste desafio.")
-        return redirect(url_for("jogo_pergunta", id_desafio=id_desafio, numero=numero) + "#dicas")
-
+    # o anuncio pode ser visto quantas vezes o aluno quiser e cada vez libera uma dica
     session["anuncio_inicio"] = time.time()
     return render_template(
         "jogo_anuncio.html", id_desafio=id_desafio, numero=numero, segundos_anuncio=SEGUNDOS_DO_ANUNCIO
@@ -1501,10 +1524,6 @@ def jogo_dica(id_desafio, numero):
                 flash("Você já usou a sua dica grátis. Ela existe uma vez só.")
                 return voltar
         elif forma_de_liberar == "anuncio":
-            ja_usou_o_anuncio = aluno_ja_usou_o_anuncio(db, session["id_usuario"], id_desafio)
-            if ja_usou_o_anuncio:
-                flash("Você já usou o anúncio deste desafio.")
-                return voltar
             inicio_anuncio = session.get("anuncio_inicio")
             segundos_no_anuncio = time.time() - inicio_anuncio if inicio_anuncio else 0
             if segundos_no_anuncio < SEGUNDOS_DO_ANUNCIO:
@@ -1526,7 +1545,7 @@ def jogo_dica(id_desafio, numero):
         if forma_de_liberar == "gratis":
             desempenho.dica_gratis_usada = True
         elif forma_de_liberar == "anuncio":
-            db.add(AnuncioDicaUsuario(id_usuario=session["id_usuario"], id_desafio=id_desafio, data_uso=datetime.now()))
+            # apaga a hora do anuncio pra cada dica nova pedir um anuncio novo
             session.pop("anuncio_inicio", None)
             # o tempo vendo o anuncio nao conta no tempo da pergunta
             estado_tentativa["inicio_pergunta"] = estado_tentativa.get("inicio_pergunta", time.time()) + segundos_no_anuncio
@@ -1633,25 +1652,7 @@ def jogo_finalizar_desafio(id_desafio):
         }
         faltava_so_este = ids_concluidos_antes == (set(ids_desafios_da_fase) - {id_desafio})
 
-        # cada pergunta soma na sequencia so na primeira vez que o aluno acerta ela e errar nao zera e repetir desafio concluido nao soma
-        ja_acertou_antes = {
-            id_pergunta
-            for (id_pergunta,) in db.query(RespostaUsuario.id_pergunta)
-            .join(TentativaDesafio, RespostaUsuario.id_tentativa == TentativaDesafio.id_tentativa)
-            .join(DesafioUsuario, TentativaDesafio.id_desafio_usuario == DesafioUsuario.id_desafio_usuario)
-            .filter(
-                DesafioUsuario.id_usuario == id_usuario,
-                RespostaUsuario.id_pergunta.in_([pergunta.id_pergunta for pergunta in perguntas]),
-                RespostaUsuario.correta == True,
-            )
-        }
-        acertos_novos = sum(
-            1
-            for pergunta, _, acertou in respostas_para_salvar
-            if acertou and pergunta.id_pergunta not in ja_acertou_antes
-        )
-
-        # repetir um desafio ja concluido nao gera pontos nem conta pros dias seguidos
+        # repetir um desafio ja concluido nao gera pontos nem mexe na sequencia nem conta pros dias seguidos
         era_repeticao = bool(desafio_usuario.concluido_primeira_vez)
         primeira_vez = passou and not era_repeticao
         desafio_usuario.total_tentativas += 1
@@ -1683,12 +1684,20 @@ def jogo_finalizar_desafio(id_desafio):
 
         desempenho = buscar_desempenho_do_usuario(db, id_usuario)
         conquistas_novas = []
+        sequencia_zerou = False
         if desempenho:
             # soma os segundos exatos e so depois divide por 60 senao cada desafio curto perdia os segundos
             desempenho.segundos_totais += max(tempo_gasto, 0)
             desempenho.minutos_totais = desempenho.segundos_totais // 60
-            desempenho.sequencia_atual += acertos_novos
-            desempenho.sequencia_maxima = max(desempenho.sequencia_maxima, desempenho.sequencia_atual)
+            # sequencia de acertos segue a ordem das perguntas cada acerto soma 1 e qualquer erro volta pra zero
+            if not era_repeticao:
+                for _, _, acertou in respostas_para_salvar:
+                    if acertou:
+                        desempenho.sequencia_atual += 1
+                        desempenho.sequencia_maxima = max(desempenho.sequencia_maxima, desempenho.sequencia_atual)
+                    else:
+                        desempenho.sequencia_atual = 0
+                        sequencia_zerou = True
             if primeira_vez:
                 desempenho.total_pontos += desafio.pontos
                 desempenho.pontos_carteira += desafio.pontos
@@ -1727,7 +1736,7 @@ def jogo_finalizar_desafio(id_desafio):
             total=len(perguntas),
             tempo_gasto=tempo_gasto,
             tempos_das_perguntas=tempos_das_perguntas,
-            acertos_novos=acertos_novos,
+            sequencia_zerou=sequencia_zerou,
             sequencia=(desempenho.sequencia_atual if desempenho else 0),
             dias_seguidos=dias_seguidos_hoje(desempenho),
             conquistas_novas=conquistas_novas,
@@ -2828,10 +2837,9 @@ def admin_desafio_form(id_fase=None, id_desafio=None):
         if request.method == "POST":
             ordem = ler_numero_inteiro_do_formulario("ordem")
             estrelas = ler_numero_inteiro_do_formulario("estrelas")
-            tempo_limite_seg = ler_numero_inteiro_do_formulario("tempo_limite_seg")
 
-            if ordem < 1 or not (1 <= estrelas <= 5) or tempo_limite_seg < 1:
-                flash("Confira ordem, estrelas (1 a 5) e tempo limite.")
+            if ordem < 1 or not (1 <= estrelas <= 5):
+                flash("Confira a ordem e as estrelas (1 a 5).")
             else:
                 pontos = estrelas * 3  # regra do banco
                 desafio_e_novo = desafio is None
@@ -2843,7 +2851,6 @@ def admin_desafio_form(id_fase=None, id_desafio=None):
                             ordem=ordem,
                             estrelas=estrelas,
                             pontos=pontos,
-                            tempo_limite_seg=tempo_limite_seg,
                             ativo=False,
                         )
                         db.add(desafio)
@@ -2851,7 +2858,6 @@ def admin_desafio_form(id_fase=None, id_desafio=None):
                         desafio.ordem = ordem
                         desafio.estrelas = estrelas
                         desafio.pontos = pontos
-                        desafio.tempo_limite_seg = tempo_limite_seg
                     db.commit()
                     if desafio_e_novo:
                         flash("Desafio criado como inativo. Cadastre pelo menos uma pergunta e depois toque em Ativar.")

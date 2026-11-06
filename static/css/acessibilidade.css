@@ -281,9 +281,23 @@ body.tema-contraste .dica-spam {
 
 /* alto contraste recompensa conquistada pop up de conquista e podio do ranking */
 
-body.tema-contraste .cartao-conquistada {
+body.tema-contraste .cartao-conquistada,
+body.tema-contraste .cartao-desafio-verde {
   background: #e5f4e5;
   border-color: #0f5a1c;
+}
+
+body.tema-contraste .cartao-desafio-amarelo {
+  background: #fff0c2;
+  border-color: #8a5a00;
+}
+
+body.tema-contraste .texto-desafio-verde {
+  color: #0f5a1c;
+}
+
+body.tema-contraste .texto-desafio-amarelo {
+  color: #5c3b00;
 }
 
 body.tema-contraste .conquista-caixa {

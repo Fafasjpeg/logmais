@@ -129,6 +129,11 @@ table.admin-tabela tr:last-child td {
   color: #a15c00;
 }
 
+/* no admin o aviso tem a mesma largura do formulario pra ficar alinhado com ele */
+.admin-shell .avisos {
+  max-width: 480px;
+}
+
 .admin-form {
   display: flex;
   flex-direction: column;

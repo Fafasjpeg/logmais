@@ -16,6 +16,10 @@
   <header class="topo-azul">
     <a class="topo-voltar" href="{{ url_for('trilha') }}">←</a>
     <h1>{{ fase.nome_fase }}</h1>
+    {# icone de informacao igual ao do log abre o tutorial da fase e sem tutorial a rota volta com um aviso #}
+    <a class="topo-info" href="{{ url_for('tutorial_fase', id_fase=fase.id_fase, numero=1) }}" aria-label="Ver tutorial desta fase" title="Ver tutorial desta fase">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-5"/><circle cx="12" cy="7.8" r="0.6" fill="currentColor"/></svg>
+    </a>
   </header>
   <main class="conteudo-app">
     {% with mensagens = get_flashed_messages() %}
@@ -32,19 +36,27 @@
     </div>
 
     <p class="cartao-corpo">Faça os desafios em ordem. Para concluir um desafio você precisa acertar todas as perguntas dele.</p>
-    {% if tem_tutorial %}
-      <a class="botao-secundario" href="{{ url_for('tutorial_fase', id_fase=fase.id_fase, numero=1) }}">Ver tutorial de cálculo desta fase</a>
-    {% endif %}
 
     {% for item in desafios %}
-      <div class="cartao {{ 'cartao-bloqueado' if item.estado == 'bloqueada' else '' }}">
+      <div class="cartao {{ 'cartao-bloqueado' if item.estado == 'bloqueada' else '' }} {{ 'cartao-desafio-verde' if item.cor == 'verde' else '' }} {{ 'cartao-desafio-amarelo' if item.cor == 'amarelo' else '' }}">
         <p class="cartao-titulo">Desafio {{ item.desafio.ordem }} · dificuldade {{ item.desafio.estrelas }} de 5</p>
-        <p class="cartao-corpo">Vale {{ item.desafio.pontos }} pontos na primeira vez que você acertar tudo{% if not session.get('sem_pressao') %} · tempo de referência: {{ item.desafio.tempo_limite_seg }} segundos{% endif %}</p>
+        {% if item.cor == 'verde' %}
+          <p class="texto-desafio-verde">Concluído com todas as respostas certas</p>
+        {% elif item.cor == 'amarelo' %}
+          <p class="texto-desafio-amarelo">Você errou alguma pergunta ou não terminou. Tente de novo!</p>
+        {% endif %}
+        <p class="cartao-corpo">Vale {{ item.desafio.pontos }} pontos na primeira vez que você acertar tudo</p>
         <a class="botao-primario" style="display:block; text-align:center; text-decoration:none;" href="{{ url_for('jogo_desafio', id_desafio=item.desafio.id_desafio) }}">
           {% if item.estado == 'bloqueada' %}
             Bloqueado: conclua o desafio anterior
           {% else %}
-            {{ 'Concluído: jogar de novo (sem novos pontos)' if item.estado == 'completa' else 'Começar desafio' }}
+            {% if item.estado == 'completa' %}
+              Concluído: jogar de novo (sem novos pontos)
+            {% elif item.cor == 'amarelo' %}
+              Tentar de novo
+            {% else %}
+              Começar desafio
+            {% endif %}
           {% endif %}
         </a>
       </div>

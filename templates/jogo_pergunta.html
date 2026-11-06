@@ -92,11 +92,7 @@
               </form>
             {% endif %}
 
-            {% if anuncio_disponivel %}
-              <a class="botao-secundario dica-acao" href="{{ url_for('jogo_anuncio', id_desafio=id_desafio, numero=numero) }}">Assistir a um anúncio de {{ segundos_anuncio }} segundos (1 por desafio)</a>
-            {% else %}
-              <p class="cartao-corpo">O anúncio deste desafio já foi usado.</p>
-            {% endif %}
+            <a class="botao-secundario dica-acao" href="{{ url_for('jogo_anuncio', id_desafio=id_desafio, numero=numero) }}">Assistir a um anúncio de {{ segundos_anuncio }} segundos</a>
 
             <details class="dica-compra">
               <summary>Comprar dicas com pontos (você tem {{ pontos_do_aluno }} na carteira)</summary>

@@ -29,9 +29,10 @@ Projeto Integrador — Instituto Federal de São Paulo (IFSP) — 2026
 8. [Tecnologias e estrutura de pastas](#8-tecnologias-e-estrutura-de-pastas)
 9. [Como rodar o projeto](#9-como-rodar-o-projeto)
 10. [Fase atual do desenvolvimento](#10-fase-atual-do-desenvolvimento)
-11. [Roteiro de apresentação (15 minutos, 5 apresentadores)](#11-roteiro-de-apresentação-15-minutos-5-apresentadores)
-12. [Limitações conhecidas e próximos passos](#12-limitações-conhecidas-e-próximos-passos)
-13. [Equipe](#13-equipe)
+11. [Plano de testes](#11-plano-de-testes)
+12. [Roteiro de apresentação (15 minutos, 5 apresentadores)](#12-roteiro-de-apresentação-15-minutos-5-apresentadores)
+13. [Limitações conhecidas e próximos passos](#13-limitações-conhecidas-e-próximos-passos)
+14. [Equipe](#14-equipe)
 
 ---
 
@@ -184,6 +185,9 @@ As 11 primeiras fases seguem exatamente o desenho do Figma. A partir da 12ª, o 
 | Desbloqueio | O primeiro desafio incompleto de uma fase é o "atual"; os seguintes ficam bloqueados |
 | Desbloqueio de fases | A fase seguinte só abre quando todos os desafios da anterior estão concluídos |
 | Recompensas | Entregues sozinhas quando o aluno alcança o valor de pontos, horas ou sequência |
+| Sequência de acertos | Cada resposta certa soma 1 e qualquer erro volta para zero; repetir um desafio concluído não muda a sequência |
+| Dicas | Até 3 por pergunta, ensinando o caminho sem dar o resultado. A primeira dica da conta é grátis (uma vez só); depois o aluno assiste a um anúncio de 5 segundos (sem limite) ou usa dicas compradas com a carteira (3 por 40 ou 5 por 55 pontos) |
+| Tempo | O cronômetro mede o tempo de cada pergunta; não existe tempo limite. O tempo dos desafios do dia enche a barra da agenda |
 
 ### Fluxo de um desafio
 
@@ -360,7 +364,6 @@ erDiagram
         tinyint ordem
         tinyint estrelas
         tinyint pontos
-        int tempo_limite_seg
     }
     tutorial_tela {
         int id_tutorial_tela PK
@@ -426,7 +429,10 @@ LogMais/
 |   |-- migracao_04_carteira.sql   separa os pontos em total (ranking) e carteira (gastar em dicas)
 |   |-- migracao_05_perguntas_extras_ia.sql  guarda as perguntas extras do Log compradas com pontos
 |   |-- migracao_06_email_e_feedback.sql  confirmação de e-mail por código e tabela de feedback
-|   `-- seed/seed_logmais.sql      dados de exemplo
+|   |-- migracao_07_dicas_login_e_segundos.sql  dicas do Log, trava do login e segundos de estudo
+|   |-- migracao_08_revisao_das_perguntas.sql  revisão do conteúdo das 165 perguntas
+|   |-- migracao_09_sem_tempo_limite.sql  tira a coluna de tempo limite do desafio
+|   `-- seed/seed_logmais.sql      dados de exemplo (já revisados)
 |-- templates/               telas em HTML (Jinja2), uma por arquivo
 |-- static/
 |   |-- css/                 style, app, trilha, tutorial e admin
@@ -466,6 +472,7 @@ copy .env.example .env
    - Se o banco já existe e você quer as **configurações de acessibilidade** (modo sem pressão, alto contraste, fonte) e os **dias seguidos de estudo**, execute `database/migracao_03_acessibilidade.sql`. Sem ela o login e o jogo dão erro, porque o código lê as colunas novas. Rode as migrações 02, 03, 04, 05 e 06 antes de abrir o app.
    - Se o banco já existe e você quer a **confirmação de e-mail** e o **feedback de acessibilidade**, execute `database/migracao_06_email_e_feedback.sql`. Sem ela o login dá erro, porque o código lê as colunas novas. As contas que já existem ficam com o e-mail confirmado.
    - Se o banco já existe e você quer a **carteira de pontos**, execute `database/migracao_04_carteira.sql` (ela copia o total atual de cada aluno para a carteira).
+   - Se o banco já existe, execute também, nesta ordem, `database/migracao_07_dicas_login_e_segundos.sql`, `database/migracao_08_revisao_das_perguntas.sql` (perguntas revisadas) e `database/migracao_09_sem_tempo_limite.sql` (o desafio não tem tempo limite). Quem cria o banco do zero com o schema e o seed atuais não precisa delas.
 3. **Inicie o servidor:**
 
 ```
@@ -502,90 +509,163 @@ Depois de alterar o `.env`, pare e abra o Flask de novo.
 
 ## 10. Fase atual do desenvolvimento
 
-O projeto está na etapa de **integração da IA, configuração e documentação**, logo antes dos testes finais e da apresentação.
+O projeto está na etapa de **testes finais e preparação da apresentação**. As funcionalidades estão prontas, as conexões com o MySQL, a OpenAI e o Brevo foram testadas em 05/11/2026 (tabela abaixo) e o plano de testes da seção 11 passou inteiro em 06/11/2026.
 
 ```
 Prototipação no Figma     [##########] 100%   CONCLUÍDO
 Modelagem do banco        [##########] 100%   CONCLUÍDO
 Backend (rotas e regras)  [##########] 100%   CONCLUÍDO
 Frontend (telas e CSS)    [##########] 100%   CONCLUÍDO
-Integração da IA e config [#######---]  70%   EM ANDAMENTO
-Testes e ajustes          [##--------]  20%   PENDENTE
-Apresentação              [#---------]  10%   PENDENTE
+Integração da IA e config [##########] 100%   CONCLUÍDO
+Envio de e-mail (Brevo)   [#########-]  90%   EM ANDAMENTO
+Testes e ajustes          [########--]  80%   EM ANDAMENTO
+Apresentação              [###-------]  30%   EM ANDAMENTO
 ```
 
-Os percentuais da integração, dos testes e da apresentação são estimativas do grupo, só para dar uma ideia do andamento.
+Os percentuais dos testes e da apresentação são estimativas do grupo, só para dar uma ideia do andamento.
 
 | Etapa | Status | O que foi feito |
 |-------|--------|-----------------|
 | Prototipação | Concluído | Telas de login, cadastro, assistente de rotina, agenda e trilha no Figma |
-| Banco de dados | Concluído | Esquema MySQL, restrições, triggers, soft delete e dados de exemplo (11 fases, 55 desafios, 165 perguntas) |
+| Banco de dados | Concluído | 19 tabelas, restrições, 2 triggers, soft delete e dados de exemplo (11 fases, 55 desafios, 165 perguntas revisadas em 06/11/2026). Migrações 01 a 08 aplicadas |
 | Backend | Concluído | Fluxo completo de aluno e de administrador em `app.py` |
-| Frontend | Concluído | Telas em HTML e CSS seguindo o visual do protótipo |
-| Integração da IA | Em andamento | Chamada à OpenAI, limites, castigo, tokens e chave no `.env` prontos. **Falta colocar a chave e testar com a API real** |
-| Configuração | Em andamento | Segredos no `.env`, `.gitignore`, `requirements.txt` e este README |
+| Frontend | Concluído | Telas em HTML e CSS seguindo o visual do protótipo, responsivas a partir de 320 px |
+| Integração da IA | Concluído | Chat do Log e dicas testados com a API real da OpenAI |
+| Envio de e-mail | Em andamento | Chave, IP e remetente aceitos pelo Brevo. **Falta conferir um e-mail chegando de verdade na caixa de entrada** |
+| Configuração | Concluído | Segredos no `.env`, `.gitignore`, `requirements.txt` e este README |
+| Segurança | Concluído | Proteção CSRF, bloqueio do login após erros seguidos, código por e-mail e debug desligado |
 | Trilha escalável | Concluído | Fases novas entram na trilha mantendo a linha pontilhada |
-| Tutorial de cálculo | Em andamento | Telas, navegação e área do admin prontas. **Faltam as fotos das resoluções** |
-| Testes e ajustes | Pendente | Teste completo com MySQL, aluno e administrador |
-| Apresentação | Pendente | Ensaio com o roteiro da próxima seção |
+| Tutorial de cálculo | Em andamento | Telas, navegação e área do admin prontas. **Faltam as fotos das resoluções** (nenhuma tela cadastrada ainda) |
+| Testes e ajustes | Em andamento | Plano de 23 casos executado em 06/11/2026, todos passaram (seção 11). **Falta o teste completo à mão no dia** |
+| Apresentação | Em andamento | Roteiro dividido pelas 5 áreas do grupo pronto (seção 12). **Falta ensaiar** |
 
-Histórico no Git: o código foi iniciado em 21/08/2026 e as últimas atualizações são de 24/08/2026. A documentação, a IA e o tutorial foram acrescentados em outubro de 2026.
+### Testes de 05/11/2026
+
+| O que foi testado | Resultado |
+|-------------------|-----------|
+| Conexão com o MySQL 8.0 | OK. `SELECT 1` e a rota `/conexao` respondem |
+| Banco igual ao código | OK. As 19 tabelas do `schema_logmais.sql` existem e nenhuma coluna do `models.py` falta no banco |
+| Dados de exemplo | OK. 11 fases, 55 desafios e 165 perguntas ativos, 2 administradores e 4 alunos |
+| Chat do Log (`gpt-4o-mini`) | OK. "Como somar frações com denominadores diferentes?" recebeu uma explicação em partes, e "Qual o melhor time de futebol?" foi recusada como fora do tema |
+| Dicas do Log | OK depois de uma correção. O modelo antigo (`gpt-4.1-nano`) foi descontinuado pela OpenAI e dava erro 404, então as dicas passaram a usar o `gpt-4o-mini`. A dica explica o caminho sem entregar o resultado e fica guardada na tabela `dica_pergunta` |
+| Brevo | OK. Um envio em modo de teste (sandbox, sem entregar a mensagem) foi aceito, o que confirma a chave, o IP liberado e o remetente |
+| Telas do aluno | OK. Agenda, trilha, recompensas, Log, histórico, ranking, perfil, feedback, configurações e rotina abriram sem erro |
+| Telas do administrador | OK. Painel, usuários, fases, recompensas, rotinas, relatórios e feedbacks abriram sem erro |
+
+Histórico no Git: o código foi iniciado em 21/08/2026. A IA, o tutorial, o e-mail, as dicas e a documentação foram acrescentados em outubro de 2026, e a última limpeza do código é de 20/10/2026.
 
 ---
 
-## 11. Roteiro de apresentação (15 minutos, 5 apresentadores)
+## 11. Plano de testes
 
-Cada apresentador fala por cerca de **3 minutos**. As falas são sugestões: adaptem com as próprias palavras.
+Os 23 casos abaixo cobrem o caminho do aluno, as regras do jogo, a IA e a área do administrador. Cada um tem os passos para repetir à mão, na frente da banca se for preciso.
+
+**Como foram executados em 06/11/2026:** todos rodaram de forma automática pelo cliente de teste do Flask, contra o banco MySQL real, dentro de uma transação desfeita no fim (nada ficou gravado). O Log usou a API real da OpenAI. Os e-mails foram simulados para não enviar mensagens de verdade; o envio real pelo Brevo foi conferido à parte em modo sandbox (seção 10).
+
+**Resultado: 23 de 23 passaram.**
+
+| ID | O que é testado | Passos | Resultado esperado | Resultado em 06/11/2026 |
+|----|-----------------|--------|--------------------|-------------------------|
+| T01 | Cadastro de aluno novo | Cadastrar nome, e-mail novo e senha | Conta criada sem e-mail confirmado e código enviado por e-mail | Passou. Conta criada sem confirmação, 1 e-mail enviado, foi para a tela do código |
+| T02 | Confirmação do e-mail | Digitar um código errado e depois o certo | Código errado recusado; o certo confirma e entra | Passou. Errado recusado, certo confirmou e abriu a apresentação |
+| T03 | Trava do login | Errar a senha 5 vezes e tentar com a senha certa | A 6ª tentativa é recusada por 10 minutos | Passou. Aviso "Muitas tentativas erradas. Tente de novo às 14:46." |
+| T04 | Login certo | Entrar com e-mail e senha certos | Entra na área do aluno | Passou |
+| T05 | Proteção CSRF | Enviar um formulário sem o código de segurança | Recusado com a tela "Sessão expirada" | Passou. Resposta 400 |
+| T06 | Aluno no admin | Logado como aluno, abrir `/admin` | Não entra no painel | Passou. Voltou para a tela inicial |
+| T07 | Rotina de estudo | Escolher 20 minutos, tarde e 5 dias | Rotina salva e agenda com um bloco por dia | Passou. 5 blocos na agenda |
+| T08 | Fase bloqueada | Abrir pela URL a fase 2 sem ter feito a 1 | Tela de bloqueado | Passou |
+| T09 | Desafio com erro | Responder certa, errada, certa | Não conclui, não dá pontos, a sequência zera no erro | Passou. 0 pontos, sequência 1 |
+| T10 | Cor amarela | Abrir a fase depois do T09 | Desafio amarelo com "Tentar de novo" | Passou |
+| T11 | Desafio todo certo | Acertar as 3 perguntas | Conclui, +3 pontos no total e na carteira, sequência +3 | Passou. 3 pontos, sequência 4 |
+| T12 | Cor verde | Abrir a fase depois do T11 | Desafio verde | Passou |
+| T13 | Repetir desafio concluído | Jogar de novo o mesmo desafio com um erro | Sem pontos e sem mexer na sequência, mas a tentativa é registrada | Passou. Pontos 3→3, sequência 4→4, tentativas 2→3 |
+| T14 | Resposta digitada | Digitar "6133", " 6.133 " e "2.5" | Aceitas como 6.133, 6.133 e 2,5 | Passou |
+| T15 | Dica grátis | Usar a dica grátis e tentar de novo em outra pergunta | Só funciona uma vez por usuário | Passou |
+| T16 | Dica por anúncio | Pedir sem esperar e depois esperando 5 s, duas vezes | Sem esperar é recusada; esperando libera uma dica por anúncio, sem limite | Passou. 2 anúncios liberaram 2 dicas |
+| T17 | Comprar dicas | Comprar 3 dicas sem pontos e depois com 50 na carteira | Sem pontos recusa; com 50 fica com 10, ganha 3 dicas e o ranking não muda | Passou |
+| T18 | Barra da agenda | Fazer um desafio de 15 minutos com meta de 20 | Mostra 15 de 20 minutos e 75% | Passou |
+| T19 | Log (OpenAI real) | Perguntar sobre futebol e sobre frações | Futebol recusado; frações explicadas | Passou |
+| T20 | Limite do Log | Mandar uma pergunta com 301 caracteres | Recusada antes de chamar a OpenAI | Passou |
+| T21 | Feedback | Enviar dois feedbacks no mesmo mês | Salva o primeiro, manda e-mail à equipe e recusa o segundo | Passou. 1 salvo, 1 e-mail |
+| T22 | Admin cria desafio | Criar um desafio com 2 estrelas | Criado inativo com 6 pontos | Passou |
+| T23 | Soft delete | Admin desativa uma pergunta | Continua no banco com `ativo` falso e some do jogo | Passou |
+
+---
+
+## 12. Roteiro de apresentação (15 minutos, 5 apresentadores)
+
+Cada pessoa fala por **3 minutos** sobre a parte que fez, enquanto mostra no app. A ordem segue o caminho de um aluno: abertura, telas, banco, regras do jogo e IA. As falas são sugestões: adaptem com as próprias palavras.
+
+| Ordem | Quem | Parte do projeto |
+|-------|------|------------------|
+| 1 | Pessoa 1 | Documentação e front-end |
+| 2 | Pessoa 2 | Front-end e prototipação |
+| 3 | Pessoa 3 | Banco de dados |
+| 4 | Pessoa 4 | Back-end integrado ao banco de dados |
+| 5 | Pessoa 5 | Back-end, conexão com o front e APIs externas (OpenAI e Brevo) |
 
 ### Antes de começar (checklist)
 
-- [ ] MySQL ligado e banco criado com o seed; migração do tutorial executada
-- [ ] `.env` preenchido, com `OPENAI_API_KEY` válida e teste feito antes
-- [ ] Servidor aberto em `http://127.0.0.1:5000` no navegador, com a janela no tamanho de celular
-- [ ] Uma conta de aluno **nova** (para mostrar cadastro) e a conta `aluno@logmais.com` para o jogo
-- [ ] Uma conta de teste exclusiva para mostrar o castigo do Log (ela fica 10 minutos bloqueada)
-- [ ] Pelo menos uma fase com 3 ou 4 telas de tutorial com foto cadastradas
-- [ ] Uma aba do painel admin já logada como `admin@logmais.com`
+- [ ] MySQL ligado, banco com o seed e as migrações 01 a 09 executadas
+- [ ] `.env` preenchido e o Log testado no mesmo dia (OpenAI responde)
+- [ ] Brevo liberado (IP autorizado) e a caixa do e-mail de teste aberta no celular de quem faz o cadastro
+- [ ] `python app.py` rodando e o navegador em `http://127.0.0.1:5000`, com a janela no tamanho de celular
+- [ ] Um e-mail **novo** para o cadastro ao vivo e a conta `aluno@logmais.com` com algum progresso para o jogo
+- [ ] Pelo menos a fase 1 com 2 ou 3 telas de tutorial com foto cadastradas
+- [ ] Uma aba do admin logada como `admin@logmais.com`
+- [ ] MySQL Workbench aberto no banco `logmais` (para a Pessoa 3)
+- [ ] Opcional: uma conta de teste já de castigo no Log (3 perguntas fora do tema seguidas)
 
 ### Divisão e falas
 
 | Tempo | Quem | Tela (rota) | O que mostrar | Fala sugerida |
 |-------|------|-------------|---------------|---------------|
-| 0:00 a 0:45 | Apresentador 1 | Login (`/auth/login`) | Tela de login e o logo | "Somos o grupo [nome]. Este é o LOG+, um aplicativo de matemática pensado para estudantes com TDAH. Quem tem TDAH costuma ter dificuldade de manter a atenção em tarefas longas, então criamos um estudo curto, visual e com recompensa." |
-| 0:45 a 1:30 | Apresentador 1 | Cadastro (`/auth/cadastro`) | Cadastrar o aluno novo | "O cadastro é simples: nome, e-mail e senha. A senha é guardada de forma criptografada, nunca em texto puro." |
-| 1:30 a 3:00 | Apresentador 1 | Apresentação (`/onboarding/1` a `4`) | Passar os 4 passos | "Logo depois do cadastro, o Log, nosso mascote, se apresenta em quatro telas rápidas: a trilha, o cronômetro e como pedir ajuda. Cada tela tem um texto curto e um botão claro, e dá para pular." |
-| 3:00 a 4:15 | Apresentador 2 | Assistente de rotina (`/rotina/configurar`) | Escolher 20 minutos, tarde e três dias | "Antes de estudar, o aluno monta a própria rotina: quantos minutos por dia, em qual horário e em quais dias. Respeitar o ritmo de cada um é central para o TDAH." |
-| 4:15 a 5:00 | Apresentador 2 | Agenda (`/agenda`) | Mostrar os blocos da semana e o progresso do dia | "Com a rotina, o app gera a agenda da semana. O botão 'Iniciar estudo' leva direto para a trilha." |
-| 5:00 a 6:00 | Apresentador 2 | Trilha (`/jogo/trilha`) | Rolar a trilha, mostrar a legenda e os estados | "A matéria vira uma trilha de fases. Cada fase mostra seu nome, quantos desafios o aluno já fez e o estado escrito: Concluída, Em andamento ou Bloqueada. A fase seguinte só abre quando a anterior termina. A trilha cresce sozinha quando o professor cadastra fases novas." |
-| 6:00 a 7:00 | Apresentador 3 | Tutorial (`/jogo/fase/<id>/tutorial/1`) | Entrar numa fase com tutorial; tocar na tela, usar as setas e as bolinhas; mostrar o botão Pular | "Ao entrar numa fase pela primeira vez, o aluno vê um tutorial com a foto da conta resolvida passo a passo. Toca na tela para avançar, usa as setas para voltar, vê pelas bolinhas em qual tela está e pode pular no canto superior direito. Só aparece na primeira vez, e dá para rever depois." |
-| 7:00 a 8:15 | Apresentador 3 | Desafio (`/jogo/desafio/<id>/pergunta/1`) | Responder uma pergunta certa e outra errada | "Cada desafio tem poucas perguntas, uma por vez. A resposta aparece na hora: se acertou, 'Resposta correta'; se errou, mostramos a resposta certa. Esse retorno imediato mantém o aluno engajado." |
-| 8:15 a 9:00 | Apresentador 3 | Resultado e fase concluída | Mostrar pontos, tempo, e repetir um desafio já feito | "Ao final, o aluno vê os pontos e o tempo. Os pontos valem só na primeira vez que ele acerta tudo. Repetir não dá pontos, mas também não prejudica: o tempo conta como estudo." |
-| 9:00 a 9:45 | Apresentador 4 | Recompensas e ranking (`/recompensas`, `/ranking`) | Mostrar as conquistas e a turma | "As recompensas são entregues sozinhas quando o aluno alcança uma meta de pontos ou horas. O ranking mostra a turma ordenada por pontos." |
-| 9:45 a 11:15 | Apresentador 4 | Log (`/ia`) | Abrir o ícone de informação com os limites; perguntar "como somar frações?" e depois algo fora do tema | "Quando bate uma dúvida, o aluno chama o Log. Ele só responde matemática, de um jeito bem didático, em partes separadas e com os pontos importantes em negrito. Perguntando sobre outro assunto, o Log recusa com educação. Para controlar o custo e manter o foco, há limite de 300 caracteres, 3 perguntas por minuto, 10 grátis por dia (quem quiser mais compra pacotes com os pontos da carteira) e um castigo de 10 minutos depois de 3 perguntas seguidas fora do tema." |
-| 11:15 a 12:00 | Apresentador 4 | Log com a conta de teste | Mostrar o aviso de chat fechado e o campo desativado | "Aqui a conta de teste fez 3 perguntas fora do tema: o chat fecha e mostra a que horas volta. Se a internet cair, o Log avisa que está indisponível e não gasta o limite do aluno." |
-| 12:00 a 13:00 | Apresentador 5 | Painel admin (`/admin`) | Mostrar os números do painel e a lista de usuários | "Esta é a área do professor. O painel mostra quantos alunos, fases, desafios e perguntas existem, e quantos pontos já foram distribuídos." |
-| 13:00 a 14:15 | Apresentador 5 | Fases, desafios, perguntas e Tutorial (`/admin/fases`) | Criar uma fase nova; abrir Tutorial e enviar uma foto; voltar à trilha | "O professor cria fases, desafios e perguntas sem mexer em código. Ao desativar algo, o conteúdo não é apagado, apenas escondido. Em Tutorial ele envia as fotos da resolução de cada fase, e a trilha mostra a fase nova automaticamente." |
-| 14:15 a 15:00 | Apresentador 5 | Relatórios (`/admin/relatorios`) e encerramento | Mostrar ranking, progresso por fase e tempo | "Os relatórios mostram o progresso de cada aluno por fase. Como próximos passos temos a sequência diária, o envio de e-mails e mais conteúdo. Obrigado!" |
+| 0:00 a 1:00 | Pessoa 1 (documentação e front-end) | Login (`/auth/login`) | O logo e a tela de login | "Somos o grupo [nome] e este é o LOG+, um app de matemática para estudantes com TDAH. Quem tem TDAH perde a atenção em tarefas longas, então dividimos a matemática em desafios curtos, visuais e com recompensa na hora. Tudo o que vamos mostrar está documentado no README: objetivo, regras, banco, como rodar e este roteiro." |
+| 1:00 a 2:00 | Pessoa 1 | Cadastro e código (`/auth/cadastro`) | Cadastrar o e-mail novo e digitar o código que chegou | "O cadastro pede nome, e-mail e senha. Para ter certeza de que o e-mail é real, mandamos um código de 6 números. A Pessoa 5 vai explicar como esse e-mail sai do app." |
+| 2:00 a 3:00 | Pessoa 1 | Configurações (`/configuracoes`) | Ligar o modo sem pressão, o alto contraste e a fonte grande | "No front-end pensamos na acessibilidade: o modo sem pressão esconde o cronômetro, o alto contraste ajuda a leitura e a fonte cresce em todas as telas. As telas também se ajustam a celulares pequenos." |
+| 3:00 a 4:00 | Pessoa 2 (front-end e prototipação) | Figma e assistente de rotina (`/rotina/configurar`) | Mostrar o protótipo no Figma ao lado da tela pronta; escolher 20 minutos, tarde e três dias | "Começamos pelo protótipo no Figma, com as cores azul e amarelo, as fontes Lexend e Inter e os botões arredondados. As telas que não estavam no Figma seguiram o mesmo visual. Aqui o aluno monta a própria rotina, porque respeitar o ritmo de cada um é central para o TDAH." |
+| 4:00 a 5:00 | Pessoa 2 | Agenda (`/agenda`) e trilha (`/jogo/trilha`) | A barra do dia e a trilha com as fases | "A agenda mostra os dias da semana e uma barra que enche com o tempo estudado nos desafios do dia. A matéria vira uma trilha: a fase seguinte só abre quando a anterior termina." |
+| 5:00 a 6:00 | Pessoa 2 | Fase (`/jogo/fase/1`) e tutorial | Os cartões verde e amarelo; tocar no "i" e passar o tutorial | "Na fase, o desafio fica verde quando o aluno acertou tudo e amarelo quando errou ou parou no meio. O ícone de informação abre o tutorial com a foto da conta resolvida passo a passo." |
+| 6:00 a 7:00 | Pessoa 3 (banco de dados) | Diagrama do banco (seção 7) | O diagrama com as 19 tabelas | "O banco é MySQL, com 19 tabelas. As principais são usuário, fase, desafio, pergunta e alternativa, que guardam o conteúdo, e desafio do usuário e tentativa, que guardam o que cada aluno fez." |
+| 7:00 a 8:00 | Pessoa 3 | Workbench | A tabela `desafio_usuario` e a `tentativa_desafio` | "Separamos o resumo do aluno em cada desafio das tentativas. Assim o banco sabe que um desafio já foi concluído e não dá pontos de novo, mas guarda cada repetição, porque o tempo estudado conta." |
+| 8:00 a 9:00 | Pessoa 3 | Admin, perguntas (`/admin/fases`) e Workbench | Desativar uma pergunta no admin e mostrar no Workbench que ela continua lá | "O banco também se protege sozinho: um trigger impede duas alternativas certas na mesma pergunta, e os pontos são sempre estrelas vezes 3. Nada de conteúdo é apagado de verdade: ao desativar, a coluna ativo vira falso e a pergunta só some do jogo." |
+| 9:00 a 10:00 | Pessoa 4 (back-end e banco) | Desafio (`/jogo/desafio/<id>/pergunta/1`) | Responder uma pergunta certa e uma errada | "O back-end é em Flask com SQLAlchemy, que transforma as tabelas em classes Python. Cada resposta é conferida no servidor, nunca no navegador, para ninguém trapacear." |
+| 10:00 a 11:00 | Pessoa 4 | Resultado do desafio | Pontos, tempo e a sequência | "No fim, o back-end grava a tentativa e as respostas, soma o tempo e atualiza a sequência: cada acerto soma 1 e qualquer erro volta para zero. Os pontos só entram na primeira vez que o aluno acerta tudo." |
+| 11:00 a 12:00 | Pessoa 4 | Recompensas (`/recompensas`) e ranking (`/ranking`) | As conquistas e o pódio | "As recompensas são entregues sozinhas quando o aluno passa de uma meta de pontos, horas ou sequência. Separamos os pontos em dois: o total, que forma o ranking, e a carteira, que o aluno gasta em dicas." |
+| 12:00 a 13:00 | Pessoa 5 (APIs externas) | Log (`/ia`) | Perguntar "como somar frações?" e depois algo fora do tema | "O Log usa a API da OpenAI. O front manda a pergunta sem recarregar a página e o back-end chama o modelo com regras: só matemática, explicação didática e memória das últimas perguntas. Fora do tema, ele recusa com educação." |
+| 13:00 a 14:00 | Pessoa 5 | Dica numa pergunta | Pedir uma dica por anúncio ou dica comprada | "As dicas também vêm da OpenAI, mas ensinam o caminho e nunca dão o resultado: o back-end confere o texto antes de mostrar. Cada dica fica guardada no banco, então a mesma pergunta não gasta a API de novo." |
+| 14:00 a 15:00 | Pessoa 5 | Caixa de e-mail e encerramento | O e-mail com o código do cadastro | "O código que a Pessoa 1 recebeu saiu pela API do Brevo. As chaves ficam num arquivo .env que não vai para o GitHub. Testamos tudo com um plano de 23 casos, que está no README. Obrigado!" |
 
 ### Se sobrar ou faltar tempo
 
 | Situação | O que fazer |
 |----------|-------------|
-| Faltando tempo | Pule o cadastro (Apresentador 1) e a tela de ranking (Apresentador 4) |
-| Sobrando tempo | Mostre a tela de perfil e a recuperação de senha; abra o esquema do banco (seção 7) |
-| A internet cair | Mostre o aviso do Log "indisponível" e siga; o resto do app funciona sem internet |
-| Pergunta sobre a sequência | Responda que o contador existe na tela e na tabela `desempenho`, mas a regra de cálculo ainda será definida pelo grupo |
+| Faltando tempo | A Pessoa 1 pula as configurações; a Pessoa 4 pula o ranking |
+| Sobrando tempo | Mostrar a recuperação de senha, a compra de pacotes de dicas ou o castigo do Log com a conta de teste |
+| A internet cair | O Log avisa que está indisponível e não gasta o limite do aluno; o resto do app funciona sem internet. O e-mail do cadastro também precisa de internet: usem uma conta já confirmada |
+| O e-mail do código não chegar | Mostrar a pasta de spam; se não estiver lá, entrar com `aluno@logmais.com` e seguir |
+
+### Perguntas prováveis da banca e quem responde
+
+| Pergunta | Quem responde | Resposta curta |
+|----------|---------------|----------------|
+| Por que essas cores e fontes? | Pessoa 2 | Contraste alto, fontes fáceis de ler e poucos elementos por tela para não dispersar a atenção |
+| Como o app ajuda quem tem TDAH? | Pessoa 1 | Desafios curtos, retorno imediato, rotina escolhida pelo aluno, modo sem pressão e recompensas |
+| Por que não apagar o conteúdo de verdade? | Pessoa 3 | Para não perder o histórico das respostas dos alunos que já jogaram aquele conteúdo |
+| Como a sequência funciona? | Pessoa 4 | Cada resposta certa soma 1, qualquer erro volta para zero, e repetir um desafio já concluído não muda nada. A melhor sequência fica guardada |
+| E se o aluno pedir a resposta ao Log? | Pessoa 5 | O Log explica o caminho; na dica, o back-end confere e reescreve se o texto entregar o resultado |
+| Quanto custa a IA? | Pessoa 5 | Usamos modelos baratos, limite de 300 caracteres, 10 perguntas grátis por dia e as dicas ficam guardadas, então cada uma é gerada uma vez só |
+| Os dados estão seguros? | Pessoa 4 | Senhas guardadas com hash (nunca em texto puro), proteção CSRF, login travado depois de 5 erros e chaves fora do GitHub |
 
 ---
 
-## 12. Limitações conhecidas e próximos passos
+## 13. Limitações conhecidas e próximos passos
 
 | Item | Situação | Próximo passo |
 |------|----------|---------------|
-| Minutos estudados | Cada desafio soma apenas minutos inteiros, então desafios curtos somam 0 | Somar os segundos de `tentativa_desafio` |
-| Tempo limite do desafio | Cadastrado e exibido, mas não aplicado | Decidir se o tempo vai limitar ou só orientar |
 | Envio de e-mail | Depende da Brevo e de um remetente verificado; no plano gratuito o e-mail pode cair no spam | Testar o envio com contas reais e, se possível, usar um domínio próprio como remetente |
-| Desafio sem perguntas | Um desafio criado sem perguntas ativas não pode ser concluído e trava a fase | Cadastrar as perguntas logo depois de criar o desafio |
+| Desafio sem perguntas | Um desafio sem perguntas ativas fica escondido da fase até receber perguntas e ser ativado | Cadastrar as perguntas logo depois de criar o desafio |
+| Fotos dos tutoriais | Nenhuma fase tem tutorial cadastrado ainda | Cadastrar as fotos das resoluções pelo admin |
 | Senha do MySQL antiga | A senha anterior está no histórico do Git | Trocar a senha do MySQL |
 | Contas de teste do seed | Senhas simples e conhecidas | Trocar antes de qualquer uso real |
 
@@ -598,16 +678,16 @@ Cada apresentador fala por cerca de **3 minutos**. As falas são sugestões: ada
 
 ---
 
-## 13. Equipe
+## 14. Equipe
 
 Projeto Integrador do Instituto Federal de São Paulo (IFSP), 2026.
 
 | Integrante | Função |
 |------------|--------|
-| (preencher o nome) | (preencher a função) |
-| (preencher o nome) | (preencher a função) |
-| (preencher o nome) | (preencher a função) |
-| (preencher o nome) | (preencher a função) |
-| (preencher o nome) | (preencher a função) |
+| (preencher o nome) | Documentação e front-end |
+| (preencher o nome) | Front-end e prototipação (Figma) |
+| (preencher o nome) | Banco de dados |
+| (preencher o nome) | Back-end integrado ao banco de dados |
+| (preencher o nome) | Back-end, conexão com o front e APIs externas (OpenAI e Brevo) |
 
 Orientação: (preencher o nome do professor ou da professora).

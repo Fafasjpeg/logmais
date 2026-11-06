@@ -571,6 +571,11 @@
   padding: 14px 20px 4px;
 }
 
+/* dentro das telas do app o aviso ocupa a largura toda igual aos cartoes e nao os 320px do login */
+.conteudo-app .avisos {
+  max-width: none;
+}
+
 .ia-aviso {
   flex-shrink: 0;
   max-width: none;
@@ -827,6 +832,7 @@
 /* telas bem estreitas */
 @media (max-width: 359px) {
   .conteudo-app { padding: 16px 14px; }
+  .ia-aviso { margin: 8px 14px 0; }
   .topo-azul h1 { font-size: 19px; }
   .rodape-icone { width: 64px; }
 }
@@ -841,6 +847,35 @@
 .cartao-conquistada .cartao-titulo,
 .texto-conquistada {
   color: #14631f;
+}
+
+/* tela da fase desafio verde quando acertou tudo e amarelo quando errou ou parou no meio */
+
+.cartao-desafio-verde {
+  background: #eafbea;
+  border-color: #57cc47;
+}
+
+.cartao-desafio-amarelo {
+  background: #fff6dc;
+  border-color: var(--amarelo);
+}
+
+.texto-desafio-verde,
+.texto-desafio-amarelo {
+  font-family: 'Lexend', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  text-align: center;
+  margin: 0 0 6px;
+}
+
+.texto-desafio-verde {
+  color: #14631f;
+}
+
+.texto-desafio-amarelo {
+  color: #7a5200;
 }
 
 /* pop up de conquista nova aparece por cima da tela de resultado */

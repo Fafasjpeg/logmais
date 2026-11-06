@@ -145,7 +145,6 @@ class Desafio(Base):
     ordem = Column(Integer, nullable=False)
     estrelas = Column(Integer, nullable=False)
     pontos = Column(Integer, nullable=False)
-    tempo_limite_seg = Column(Integer, nullable=False)
     ativo = Column(Boolean, nullable=False, default=True)
 
     __table_args__ = (
@@ -378,7 +377,7 @@ class DicaPergunta(Base):
     )
 
 
-# anuncio que libera uma dica cada aluno pode usar um por desafio
+# tabela antiga do limite de um anuncio por desafio e desde 05/11/2026 o anuncio e liberado sempre entao o app nao usa mais ela
 class AnuncioDicaUsuario(Base):
     __tablename__ = "anuncio_dica_usuario"
 
