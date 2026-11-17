@@ -1,4 +1,4 @@
-# log+ app.py todas as rotas ficam num arquivo so e cada rota abre a propria sessao com db = _Session e fecha com db.close
+
 import hashlib
 import hmac
 import json
