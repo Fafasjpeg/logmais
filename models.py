@@ -1,4 +1,4 @@
-# mapeamento orm das tabelas do banco logmais usando sempre o orm e nunca sql montado com texto do formulario
+# mapeamento orm das tabelas do banco logmais
 
 import os
 
@@ -11,7 +11,6 @@ from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from sqlalchemy.sql import func
 import enum
 
-# o load_dotenv precisa rodar antes do create_engine pra database_url existir
 load_dotenv()
 URL_DO_BANCO = os.getenv("DATABASE_URL")
 if not URL_DO_BANCO:
@@ -21,7 +20,7 @@ Base = declarative_base()
 _Session = sessionmaker(bind=Engine)
 
 
-# enums python que espelham os enum do mysql
+# enums
 class PeriodoDia(str, enum.Enum):
     manha = "manha"
     tarde = "tarde"
@@ -68,15 +67,14 @@ class Usuario(Base):
     data_cadastro = Column(DateTime, server_default=func.now())
     ativo = Column(Boolean, nullable=False, default=True)
     modo_sem_pressao = Column(Boolean, nullable=False, default=False)
-    tema = Column(String(20), nullable=False, default="padrao")  # padrao ou contraste
-    tamanho_fonte = Column(String(20), nullable=False, default="normal")  # normal grande ou muito_grande
-    # contas antigas e o seed ja nascem verificadas e o cadastro do app grava falso ate o aluno digitar o codigo
+    tema = Column(String(20), nullable=False, default="padrao")
+    tamanho_fonte = Column(String(20), nullable=False, default="normal")
     email_verificado = Column(Boolean, nullable=False, default=True)
-    codigo_ultimo_envio_em = Column(DateTime)  # controla a espera entre um envio e outro
+    codigo_ultimo_envio_em = Column(DateTime)
     codigo_tentativas_erradas = Column(Integer, nullable=False, default=0)
-    codigo_bloqueado_ate = Column(DateTime)  # depois de muitos erros o codigo fica travado ate aqui
-    login_tentativas_erradas = Column(Integer, nullable=False, default=0)  # senhas erradas seguidas no login
-    login_bloqueado_ate = Column(DateTime)  # depois de muitos erros o login fica travado ate aqui
+    codigo_bloqueado_ate = Column(DateTime)
+    login_tentativas_erradas = Column(Integer, nullable=False, default=0)
+    login_bloqueado_ate = Column(DateTime)
 
     __table_args__ = (
         CheckConstraint("role IN (1, 2)", name="chk_usuario_role"),
@@ -84,7 +82,6 @@ class Usuario(Base):
         CheckConstraint("tamanho_fonte IN ('normal', 'grande', 'muito_grande')", name="chk_usuario_fonte"),
     )
 
-    # relacionamentos de usuario
     rotina = relationship("Rotina", back_populates="usuario", uselist=False)
     desempenho = relationship("Desempenho", back_populates="usuario", uselist=False)
     progressos = relationship("DesafioUsuario", back_populates="usuario")
@@ -124,7 +121,7 @@ class Agenda(Base):
     rotina = relationship("Rotina", back_populates="blocos_agenda")
 
 
-# fase desafio pergunta alternativa conteudo soft delete
+# fase desafio pergunta e alternativa
 class Fase(Base):
     __tablename__ = "fase"
 
@@ -194,7 +191,7 @@ class Alternativa(Base):
     pergunta = relationship("Pergunta", back_populates="alternativas")
 
 
-# progresso por aluno e desafio com tentativas e respostas
+# progresso do aluno
 class DesafioUsuario(Base):
     __tablename__ = "desafio_usuario"
 
@@ -250,13 +247,13 @@ class Desempenho(Base):
 
     id_desempenho = Column(Integer, primary_key=True)
     id_usuario = Column(Integer, ForeignKey("usuario.id_usuario", ondelete="CASCADE"), nullable=False, unique=True)
-    total_pontos = Column(Integer, nullable=False, default=0)  # tudo que ganhou nunca diminui
-    pontos_carteira = Column(Integer, nullable=False, default=0)  # saldo pra gastar em dicas
-    perguntas_extras_ia = Column(Integer, nullable=False, default=0)  # perguntas do log compradas com pontos
-    minutos_totais = Column(Integer, nullable=False, default=0)  # sempre igual a segundos_totais dividido por 60
-    segundos_totais = Column(Integer, nullable=False, default=0)  # soma exata do tempo de todas as tentativas
-    dica_gratis_usada = Column(Boolean, nullable=False, default=False)  # a dica gratis existe uma vez so
-    dicas_extras = Column(Integer, nullable=False, default=0)  # dicas compradas com pontos da carteira
+    total_pontos = Column(Integer, nullable=False, default=0)
+    pontos_carteira = Column(Integer, nullable=False, default=0)
+    perguntas_extras_ia = Column(Integer, nullable=False, default=0)
+    minutos_totais = Column(Integer, nullable=False, default=0)
+    segundos_totais = Column(Integer, nullable=False, default=0)
+    dica_gratis_usada = Column(Boolean, nullable=False, default=False)
+    dicas_extras = Column(Integer, nullable=False, default=0)
     sequencia_atual = Column(Integer, nullable=False, default=0)
     sequencia_maxima = Column(Integer, nullable=False, default=0)
     dias_seguidos = Column(Integer, nullable=False, default=0)
@@ -297,7 +294,7 @@ class RecompensaUsuario(Base):
     recompensa = relationship("Recompensa", back_populates="usuarios_que_conquistaram")
 
 
-# tutorial de calculo telas com foto que aparecem antes de uma fase
+# tutorial de calculo
 class TutorialTela(Base):
     __tablename__ = "tutorial_tela"
 
@@ -343,14 +340,14 @@ class LogIA(Base):
     usuario = relationship("Usuario", back_populates="logs_ia")
 
 
-# feedback do aluno sobre a acessibilidade do app um por mes por aluno
+# feedback de acessibilidade
 class FeedbackAcessibilidade(Base):
     __tablename__ = "feedback_acessibilidade"
 
     id_feedback = Column(Integer, primary_key=True)
     id_usuario = Column(Integer, ForeignKey("usuario.id_usuario", ondelete="CASCADE"), nullable=False)
-    nota = Column(Integer, nullable=False)  # 1 muito dificil ate 5 muito facil
-    categoria = Column(String(30), nullable=False)  # o que mais atrapalhou
+    nota = Column(Integer, nullable=False)
+    categoria = Column(String(30), nullable=False)
     texto = Column(Text, nullable=False, default="")
     data_envio = Column(DateTime, server_default=func.now())
 
@@ -361,13 +358,13 @@ class FeedbackAcessibilidade(Base):
     usuario = relationship("Usuario")
 
 
-# dica do log guardada uma vez por pergunta e nivel e reaproveitada por todos os alunos
+# dica do log
 class DicaPergunta(Base):
     __tablename__ = "dica_pergunta"
 
     id_dica = Column(Integer, primary_key=True)
     id_pergunta = Column(Integer, ForeignKey("pergunta.id_pergunta", ondelete="CASCADE"), nullable=False)
-    nivel = Column(Integer, nullable=False)  # 1 so a ideia 2 primeiro passo 3 caminho completo
+    nivel = Column(Integer, nullable=False)
     texto = Column(Text, nullable=False)
     data_criacao = Column(DateTime, server_default=func.now())
 
@@ -377,7 +374,7 @@ class DicaPergunta(Base):
     )
 
 
-# tabela antiga do limite de um anuncio por desafio e desde 05/11/2026 o anuncio e liberado sempre entao o app nao usa mais ela
+# tabela antiga de anuncio sem uso
 class AnuncioDicaUsuario(Base):
     __tablename__ = "anuncio_dica_usuario"
 
