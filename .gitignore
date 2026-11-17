@@ -3,9 +3,9 @@
 __pycache__/
 *.pyc
 
-# segredos e o modelo das variaveis ficam so na maquina de cada um
+# segredos  o .env.example e liberado porque nao tem segredo
 .env
-.env.example
+!.env.example
 
 # arquivos locais do projeto
 CLAUDE.md
